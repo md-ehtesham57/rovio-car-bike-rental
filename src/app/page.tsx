@@ -63,18 +63,117 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="features">
-        <div className="feature-card">
-          <h3>Flexible Rentals</h3>
-          <p>Choose hourly, daily, or weekly plans that suit your trip.</p>
+      <section className="vehicle-details">
+        <div className="card-style">
+          <img src="/car-images/mazda.jpg" alt="mazda-car" />
+          <div className="card-details">
+            <h1>Mazda</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+            <div className="card-cta">
+              <button>Learn more.</button>
+              <button>Book Now</button>
+            </div>
+          </div>
         </div>
-        <div className="feature-card">
-          <h3>Top Brands</h3>
-          <p>Ride your dream car or bike with premium options available.</p>
+
+        <div className="card-style">
+          <img src="/car-images/bmw.jpg" alt="bmw-car" />
+          <div className="card-details">
+            <h1>BMW</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
         </div>
-        <div className="feature-card">
-          <h3>Easy Booking</h3>
-          <p>Instant booking and smooth pickup/drop experience.</p>
+
+        <div className="card-style">
+          <img src="/car-images/ferrari.jpg" alt="ferrari-car" />
+          <div className="card-details">
+            <h1>Ferrari</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/mercedes-benz.jpg" alt="mercedes-benz-car" />
+          <div className="card-details">
+            <h1>Mercedes Benz</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/mg.jpg" alt="mg-car" />
+          <div className="card-details">
+            <h1>MG</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/honda-city.jpg" alt="honda-city-car" />
+          <div className="card-details">
+            <h1>Honda city</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/scorpio.jpg" alt="scorpio-car" />
+          <div className="card-details">
+            <h1>Scorpio</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/bolero.jpg" alt="bolero-car" />
+          <div className="card-details">
+            <h1>Bolero</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/bullet.jpg" alt="bullet-bike" />
+          <div className="card-details">
+            <h1>Royel Enfield Bullet</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/activa.jpg" alt="activa-scooty" />
+          <div className="card-details">
+            <h1>Activa</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/splender.jpg" alt="splender-bike" />
+          <div className="card-details">
+            <h1>Splender</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
+        </div>
+
+        <div className="card-style">
+          <img src="/car-images/thar.jpg" alt="thar-car" />
+          <div className="card-details">
+            <h1>Thar</h1>
+            <p>Premium car for spacial functions.</p>
+            <p>5000/Day</p>
+          </div>
         </div>
       </section>
 
