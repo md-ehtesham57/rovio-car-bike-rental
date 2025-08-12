@@ -1,4 +1,39 @@
+"use client";
+import { useEffect, useRef } from "react";
+
 export default function Home() {
+  const testimonialRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = testimonialRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        const maxScrollLeft = container.scrollWidth - container.clientWidth;
+        const atStart = container.scrollLeft <= 0;
+        const atEnd = container.scrollLeft >= maxScrollLeft - 1; // -1 for floating point precision
+
+        // If at the left edge and scrolling up (↓), allow vertical scroll
+        if (atStart && e.deltaY < 0) {
+          return; // Let the page scroll up naturally
+        }
+
+        // If at the right edge and scrolling down (↑), allow vertical scroll
+        if (atEnd && e.deltaY > 0) {
+          return; // Let the page scroll down naturally
+        }
+
+        // Otherwise, prevent default and scroll horizontally
+        e.preventDefault();
+        container.scrollLeft += e.deltaY * 4;
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   return (
     <main>
       <header>
@@ -62,7 +97,9 @@ export default function Home() {
           </div>
         </div>
       </div>
-
+      <div className="card-title">
+        <p>Browse Available Vehicles</p>
+      </div>
       <section className="vehicle-details">
         <div className="card-style">
           <img src="/car-images/mazda.jpg" alt="mazda-car" />
@@ -174,6 +211,105 @@ export default function Home() {
             <p>Premium car for spacial functions.</p>
             <p>5000/Day</p>
           </div>
+        </div>
+      </section>
+
+      <section className="testimonials">
+        <div className="testimonial-heading">
+          <h1>Testimonials</h1>
+          <p>What our customers say about us</p>
+        </div>
+        <div className="testimonial-card-div" ref={testimonialRef} >
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testimonial-card-image">
+              <img src="/car-images/ferrari.jpg" alt="pp" />
+            </div>
+            <div className="testimonial-details">
+              <p>Excellent service, The booking process was smooth, and the car was in great condition.</p>
+            </div>
+          </div>
+
         </div>
       </section>
 
