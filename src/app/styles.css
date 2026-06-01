@@ -10,10 +10,4 @@
   100% { transform: translateX(-50%); }
 }
 
-.testimonial-card-div::-webkit-scrollbar {
-  display: none;
-}
 
-.testimonial-details::-webkit-scrollbar {
-  display: none;
-}
