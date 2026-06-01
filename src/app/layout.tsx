@@ -1,25 +1,20 @@
-import { Poppins } from 'next/font/google';
-import "./styles.css";
+import type { Metadata } from "next";
+import "./globals.css";
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-poppins',
-  display: 'swap',
-});
-
-export const metadata = {
-  title: 'Ridenow Rentals',
-  description: 'Rent cars and bikes near you',
+export const metadata: Metadata = {
+  title: "Rovio — Car & Bike Rentals",
+  description:
+    "Rent top-notch cars & bikes near you. Fast, affordable & hassle-free.",
 };
 
-export default function RootLayout(
-  { children }: { children: React.ReactNode }
-) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );
-};
-
+}
