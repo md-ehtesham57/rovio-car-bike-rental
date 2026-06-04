@@ -369,7 +369,7 @@ function Vehicles() {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-0 mb-9 border-b border-white/[0.07] overflow-x-auto scrollbar-none">
+        <div className="flex gap-0 mb-9 border-b border-white/[0.07] overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {categories.map((cat) => (
             <button
               key={cat}
