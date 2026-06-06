@@ -13,7 +13,7 @@ services:
       - .env.docker
     environment:
       - NODE_ENV=production
-      - LEMU_AUTH_URL=http://lemu-auth:5000
+      - LEMU_AUTH_URL=http://rovio-lemu-auth:5000
     depends_on:
       lemu-auth:
         condition: service_healthy
@@ -28,7 +28,7 @@ services:
     build:
       context: ../lemu-auth
       dockerfile: Dockerfile
-    container_name: lemu-auth
+    container_name: rovio-lemu-auth
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -51,7 +51,7 @@ services:
     build:
       context: ../lemu-auth
       dockerfile: Dockerfile
-    container_name: lemu-worker
+    container_name: rovio-lemu-worker
     restart: unless-stopped
     command: ["node", "src/delivery/workers/mail.worker.js"]
     env_file:
