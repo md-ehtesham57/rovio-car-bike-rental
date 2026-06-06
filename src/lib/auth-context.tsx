@@ -47,11 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (data.success && data.data?.user) {
       setUser(data.data.user);
-      router.push("/");
       return null;
     }
     return data.message || "Login failed";
-  }, [router]);
+  }, []);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<string | null> => {
     const res = await fetch("/api/auth/register", {

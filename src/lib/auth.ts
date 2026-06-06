@@ -46,6 +46,16 @@ export async function register(name: string, email: string, password: string): P
   return data;
 }
 
+export async function verifyEmail(token: string): Promise<AuthResult> {
+  const res = await fetch(`${AUTH_URL}/api/v1/auth/verify-email`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json();
+  return data;
+}
+
 export async function logout(token: string): Promise<AuthResult> {
   const res = await fetch(`${AUTH_URL}/api/v1/auth/logout`, {
     method: "POST",

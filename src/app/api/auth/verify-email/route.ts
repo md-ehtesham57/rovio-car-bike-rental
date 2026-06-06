@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { login } from "@/lib/auth";
+import { verifyEmail } from "@/lib/auth";
 import { csrfGuard } from "@/lib/csrf";
 
 const schema = z.object({
-  email: z.string().email().max(255),
-  password: z.string().min(1).max(128),
+  code: z.string().length(6, "Verification code must be exactly 6 digits"),
 });
 
 export async function POST(request: NextRequest) {
@@ -25,20 +24,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message }, { status: 400 });
   }
 
-  const { email, password } = parsed.data;
-  const result = await login(email, password);
+  const { code } = parsed.data;
+  const result = await verifyEmail(code);
 
-  const response = NextResponse.json(result, { status: result.success ? 200 : 401 });
-
-  if (result.success && result.data?.token) {
-    response.cookies.set("token", result.data.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24,
-      path: "/",
-    });
-  }
-
-  return response;
+  return NextResponse.json(result, { status: result.success ? 200 : 400 });
 }

@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
   if (token) {
     try {
       await logout(token);
-    } catch (err) {
-      console.error("Failed to invalidate token on authentication server:", err);
+    } catch {
+      // Token invalidation failure is non-fatal; cookie is cleared below
     }
   }
 

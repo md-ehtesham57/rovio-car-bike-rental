@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useSearchParams, useRouter } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +21,11 @@ export default function LoginPage() {
     setError(null);
     setBusy(true);
     const err = await login(email, password);
-    if (err) setError(err);
+    if (!err) {
+      router.push(redirect);
+    } else {
+      setError(err);
+    }
     setBusy(false);
   };
 
@@ -78,9 +87,17 @@ export default function LoginPage() {
 
         <p className="text-center text-white/30 text-[12px] mt-5">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-[#E11D48] hover:text-[#F43F5E] transition-colors">Create one</Link>
+          <Link href={`/register${redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`} className="text-[#E11D48] hover:text-[#F43F5E] transition-colors">Create one</Link>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0C0C0E] flex items-center justify-center text-white/50 text-[13px]">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
