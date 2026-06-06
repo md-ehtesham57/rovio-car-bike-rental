@@ -17,6 +17,7 @@ function RegisterForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -28,11 +29,12 @@ function RegisterForm() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const err = await register(name, email, password);
-    if (err) {
-      setError(err);
+    const result = await register(name, email, password);
+    if (result.error) {
+      setError(result.error);
     } else {
       setSuccess(true);
+      if (result.data?.otp) setOtpHint(result.data.otp as string);
     }
     setBusy(false);
   };
@@ -109,6 +111,12 @@ function RegisterForm() {
             We&apos;ve sent a 6-digit code to <span className="text-white/60">{email}</span>.<br />
             Enter it below to verify your account.
           </p>
+          {otpHint && (
+            <div className="mt-3 px-4 py-2.5 bg-[#E11D48]/[0.08] border border-[#E11D48]/[0.15] rounded-lg">
+              <p className="text-white/40 text-[10px] tracking-[0.06em] uppercase">Dev hint</p>
+              <p className="text-[#E11D48] text-[24px] font-mono font-bold tracking-[0.15em]">{otpHint}</p>
+            </div>
+          )}
 
           <div className="mt-6">
             <div className="flex gap-2 justify-center">

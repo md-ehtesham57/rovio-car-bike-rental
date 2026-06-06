@@ -13,7 +13,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (name: string, email: string, password: string) => Promise<{ error?: string; data?: Record<string, unknown> }>;
   logout: () => Promise<void>;
 };
 
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.message || "Login failed";
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string): Promise<string | null> => {
+  const register = useCallback(async (name: string, email: string, password: string): Promise<{ error?: string; data?: Record<string, unknown> }> => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,9 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
     if (data.success) {
-      return null;
+      return { data: data.data };
     }
-    return data.message || "Registration failed";
+    return { error: data.message || "Registration failed" };
   }, []);
 
   const logout = useCallback(async () => {
