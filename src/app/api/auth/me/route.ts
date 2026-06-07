@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, type DecodedToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
         id: decoded.id,
         name: decoded.name,
         email: decoded.email,
+        picture: (decoded as DecodedToken).picture,
       },
     },
   });

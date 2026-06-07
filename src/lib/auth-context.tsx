@@ -7,6 +7,7 @@ type User = {
   id: string;
   name: string;
   email: string;
+  picture?: string;
 };
 
 type AuthContextType = {
@@ -14,6 +15,7 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   register: (name: string, email: string, password: string) => Promise<{ error?: string; data?: Record<string, unknown> }>;
+  googleLogin: (credential: string) => Promise<string | null>;
   logout: () => Promise<void>;
 };
 
@@ -52,6 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.message || "Login failed";
   }, []);
 
+  const googleLogin = useCallback(async (credential: string): Promise<string | null> => {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential }),
+    });
+
+    const data = await res.json();
+    if (data.success && data.data?.user) {
+      setUser(data.data.user);
+      return null;
+    }
+    return data.message || "Google sign-in failed";
+  }, []);
+
   const register = useCallback(async (name: string, email: string, password: string): Promise<{ error?: string; data?: Record<string, unknown> }> => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
@@ -73,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

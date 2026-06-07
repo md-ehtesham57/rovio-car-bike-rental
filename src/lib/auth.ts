@@ -72,6 +72,7 @@ export type DecodedToken = {
   id: string;
   name?: string;
   email?: string;
+  picture?: string;
   jti?: string;
 };
 

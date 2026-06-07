@@ -4,6 +4,8 @@ COPY package*.json ./
 RUN npm ci --include=dev && npm cache clean --force
 
 FROM node:22-alpine AS builder
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

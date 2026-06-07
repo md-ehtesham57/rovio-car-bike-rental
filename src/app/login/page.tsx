@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent, Suspense } from "react";
+import { useState, type FormEvent, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useSearchParams, useRouter } from "next/navigation";
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 
 function LoginForm() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -28,6 +29,17 @@ function LoginForm() {
     }
     setBusy(false);
   };
+
+  const handleGoogleSuccess = useCallback(async (response: CredentialResponse) => {
+    if (!response.credential) return;
+    setError(null);
+    const err = await googleLogin(response.credential);
+    if (!err) {
+      router.push(redirect);
+    } else {
+      setError(err);
+    }
+  }, [googleLogin, router, redirect]);
 
   return (
     <main className="min-h-screen bg-[#0C0C0E] flex items-center justify-center px-5">
@@ -83,6 +95,26 @@ function LoginForm() {
           >
             {busy ? "Signing in..." : "Sign in"}
           </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/[0.07]" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-[#141416] px-3 text-[11px] text-white/30">or continue with</span>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google sign-in failed")}
+              theme="filled_black"
+              size="large"
+              shape="pill"
+              text="signin_with"
+            />
+          </div>
         </form>
 
         <p className="text-center text-white/30 text-[12px] mt-5">

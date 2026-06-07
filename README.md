@@ -1,36 +1,118 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rovio — Car & Bike Rentals
 
-## Getting Started
+A full-stack car and bike rental marketplace built with Next.js 15.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS
+- **Auth Backend:** lemu-auth (Express.js, separate service)
+- **Database:** MongoDB 7
+- **Cache/Queue:** Redis 7 (email worker queue)
+- **Auth:** JWT (httpOnly cookies), Google OAuth
+- **Containerization:** Docker Compose
+
+## Architecture
+
+```
+rovio (Next.js :3000)
+  └── /api/auth/* → proxies to lemu-auth
+  └── serves SSR pages
+  └── Edge middleware verifies JWT on protected routes
+
+lemu-auth (Express :5000)
+  ├── /api/v1/auth/* — register, login, verify-email, google, me
+  ├── connects to MongoDB (users) + Redis (OTP cache)
+  └── mail worker (Redis consumer) — sends emails asynchronously
+
+mongodb (:27017)
+redis (:6379)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start (Docker)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 1. Clone both repos side by side
+# ../rovio-car-bike-rental
+# ../lemu-auth
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 2. Copy environment files
+cp .env.docker .env
+# Edit .env with your secrets (JWT_SECRET, LEMU_API_KEY, etc.)
 
-## Learn More
+# 3. Build and start all services
+docker compose up -d --build
 
-To learn more about Next.js, take a look at the following resources:
+# 4. Open http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Description |
+|---|---|
+| `JWT_SECRET` | Secret used to sign/verify auth tokens (base64, 32+ bytes) |
+| `LEMU_API_KEY` | Shared secret between rovio and lemu-auth (64-char hex) |
+| `LEMU_AUTH_URL` | URL of lemu-auth service (internal Docker hostname) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth client ID for sign-in button |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the app for CORS/CSRF |
 
-## Deploy on Vercel
+### Key Files
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `.env.docker` — Environment for Docker Compose (tracked in git, uses placeholders for secrets)
+- `.env` — Actual secrets, gitignored, used by Docker Compose for `$NEXT_PUBLIC_GOOGLE_CLIENT_ID`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Google OAuth
+
+1. Create a credential in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Add `http://localhost:3000` as an **Authorized JavaScript origin**
+3. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env`
+
+The flow uses Google Identity Services (`@react-oauth/google`):
+- Frontend gets ID token from Google
+- Sends it to `/api/auth/google` → proxied to lemu-auth
+- Backend verifies the token and returns a JWT
+
+## Auth Flow
+
+### Email/Password
+1. Register at `/register` → OTP stored in Redis, returned in response (dev hint)
+2. Verify OTP at `/verify-email` → user activated
+3. Login at `/login` → JWT set as httpOnly cookie
+
+### Google
+1. Click "Sign in with Google" → Google popup
+2. ID token sent to backend → user created if new (auto-verified)
+3. JWT set as httpOnly cookie → redirected to home
+
+## Protected Routes
+
+- `/profile` — requires auth; middleware redirects to `/login?redirect=...`
+
+## Development (without Docker)
+
+```bash
+# Terminal 1 — lemu-auth
+cd ../lemu-auth
+npm install
+# Start MongoDB & Redis locally or in Docker
+npm run dev
+
+# Terminal 2 — rovio
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+# Output: .next/standalone/ (for Docker deployment)
+```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |

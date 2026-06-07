@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
@@ -20,10 +21,14 @@ export default function ProfilePage() {
         </div>
 
         <div className="bg-[#141416] border border-white/[0.07] rounded-xl p-6 max-w-md">
-          <div className="w-12 h-12 rounded-full bg-[#E11D48]/15 flex items-center justify-center mb-4">
-            <span className="font-syne font-semibold text-[#E11D48] text-[16px]">
-              {user?.name?.charAt(0)?.toUpperCase() || "?"}
-            </span>
+          <div className="w-12 h-12 rounded-full bg-[#E11D48]/15 flex items-center justify-center mb-4 overflow-hidden">
+            {user?.picture ? (
+              <Image src={user.picture} alt="" width={48} height={48} className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-syne font-semibold text-[#E11D48] text-[16px]">
+                {user?.name?.charAt(0)?.toUpperCase() || "?"}
+              </span>
+            )}
           </div>
 
           <dl className="space-y-3">

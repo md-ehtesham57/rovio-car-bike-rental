@@ -131,8 +131,8 @@ function Navbar() {
             </Link>
           )}
           <Link
-            href="/vehicles"
-            onClick={(e) => handleBook(e, "/vehicles")}
+            href="/"
+            onClick={(e) => handleBook(e, "/")}
             className="flex items-center gap-1.5 bg-[#E11D48] hover:bg-[#F43F5E] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors duration-150"
           >
             Book now
@@ -185,10 +185,10 @@ function Navbar() {
             </Link>
           )}
           <Link
-            href="/vehicles"
+            href="/"
             onClick={(e) => {
               setOpen(false);
-              handleBook(e, "/vehicles");
+              handleBook(e, "/");
             }}
             className="mt-3 flex justify-center bg-[#E11D48] text-white text-[13px] font-medium py-2.5 rounded-md"
           >
@@ -463,7 +463,7 @@ function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
   const handleBook = (e: React.MouseEvent) => {
     if (!user) {
       e.preventDefault();
-      router.push(`/login?redirect=${encodeURIComponent(`/vehicles/${v.id}`)}`);
+      router.push(`/login?redirect=${encodeURIComponent("/")}`);
     }
   };
 
