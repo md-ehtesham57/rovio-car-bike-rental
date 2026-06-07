@@ -172,7 +172,7 @@ export default function AboutPage() {
               Redefining vehicle rentals in India
             </h2>
             <p className="text-white/40 text-[14px] leading-[1.75] font-light mb-4">
-              We believe everyone deserves access to a great vehicle — whether it's a ₹500/day scooter for a quick errand or an ₹18,000/day Bentley for a special occasion.
+              We believe everyone deserves access to a great vehicle — whether it&apos;s a ₹500/day scooter for a quick errand or an ₹18,000/day Bentley for a special occasion.
             </p>
             <p className="text-white/40 text-[14px] leading-[1.75] font-light">
               Our mission is to build the most trusted, most convenient rental experience in the country — one booking at a time.

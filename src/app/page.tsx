@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -62,8 +60,6 @@ const WHY = [
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
 function Navbar() {
-  const { user } = useAuth();
-  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -72,13 +68,6 @@ function Navbar() {
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
-
-  const handleBook = (e: React.MouseEvent, targetUrl: string) => {
-    if (!user) {
-      e.preventDefault();
-      router.push(`/login?redirect=${encodeURIComponent(targetUrl)}`);
-    }
-  };
 
   const links = [["Home", "/"], ["Vehicles", "/vehicles"], ["About", "/about"], ["Contact", "/contact"]] as const;
 
@@ -112,27 +101,11 @@ function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
-          {user ? (
-            <Link
-              href="/profile"
-              className="text-[13px] text-white/70 hover:text-white border border-white/10 hover:border-white/20 px-4 py-2 rounded-md transition-all duration-150 flex items-center gap-2"
-            >
-              <div className="w-4 h-4 rounded-full bg-[#E11D48]/20 flex items-center justify-center">
-                <span className="text-[9px] font-bold text-[#E11D48]">{user.name?.charAt(0).toUpperCase()}</span>
-              </div>
-              Profile
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150"
-            >
-              Sign in
-            </Link>
-          )}
+          <Link href="/vehicles" className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150">
+            Browse fleet
+          </Link>
           <Link
-            href="/"
-            onClick={(e) => handleBook(e, "/")}
+            href="/vehicles"
             className="flex items-center gap-1.5 bg-[#E11D48] hover:bg-[#F43F5E] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors duration-150"
           >
             Book now
@@ -167,29 +140,9 @@ function Navbar() {
               {label}
             </Link>
           ))}
-          {user ? (
-            <Link
-              href="/profile"
-              onClick={() => setOpen(false)}
-              className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors"
-            >
-              Profile ({user.name})
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors"
-            >
-              Sign in
-            </Link>
-          )}
           <Link
-            href="/"
-            onClick={(e) => {
-              setOpen(false);
-              handleBook(e, "/");
-            }}
+            href="/vehicles"
+            onClick={() => setOpen(false)}
             className="mt-3 flex justify-center bg-[#E11D48] text-white text-[13px] font-medium py-2.5 rounded-md"
           >
             Book now
@@ -208,14 +161,16 @@ function Hero() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    const len = words.length;
     const id = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
-        setIdx((i) => (i + 1) % words.length);
+        setIdx((i) => (i + 1) % len);
         setVisible(true);
       }, 250);
     }, 2400);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stats = [
@@ -225,11 +180,7 @@ function Hero() {
     { n: "24/7", l: "Support" },
   ];
 
-  const featured = [
-    { brand: "Ferrari", name: "Roma",     type: "Sports Car",   price: 12000, emoji: "🏎️", tag: "Hot" },
-    { brand: "BMW",     name: "5 Series", type: "Sedan",        price: 8000,  emoji: "🚗", tag: "Luxury" },
-    { brand: "RE",      name: "Bullet",   type: "Cruiser",      price: 1500,  emoji: "🏍️", tag: null },
-  ];
+
 
   return (
     <section className="relative flex items-center overflow-hidden bg-[#0C0C0E] pt-[60px]">
@@ -457,16 +408,6 @@ function Vehicles() {
 }
 
 function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  const handleBook = (e: React.MouseEvent) => {
-    if (!user) {
-      e.preventDefault();
-      router.push(`/login?redirect=${encodeURIComponent("/")}`);
-    }
-  };
-
   return (
     <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-0.5 transition-all duration-200">
       {/* Top image area */}
@@ -530,7 +471,6 @@ function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
           </Link>
           <Link
             href={`/vehicles/${v.id}`}
-            onClick={handleBook}
             className="flex-1 text-center text-[11px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-md transition-colors duration-150"
           >
             Book now
