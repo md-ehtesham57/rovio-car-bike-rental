@@ -1,32 +1,24 @@
 {
-  "name": "car-bike-rental",
-  "version": "0.1.0",
+  "name": "rovio",
+  "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@react-oauth/google": "^0.13.5",
-    "jose": "^6.2.3",
-    "jsonwebtoken": "^9.0.3",
-    "next": "^15.5.19",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "zod": "^4.4.3"
+    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build -w apps/web && npm run build -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "start": "npm run start -w apps/web",
+    "lint": "npm run lint -w apps/web",
+    "worker": "npm run worker -w apps/api",
+    "all": "concurrently \"npm run dev -w apps/api\" \"npm run worker\""
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.4.5",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^9.2.1"
   }
 }

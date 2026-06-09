@@ -1,23 +1,23 @@
 services:
 
-  # ─── Rovio (Next.js) ──────────────────────────────────────────
-  rovio:
+  # ─── Rovio Web (Next.js) ──────────────────────────────────────
+  rovio-web:
     build:
-      context: .
+      context: ./apps/web
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
-    container_name: rovio-app
+    container_name: rovio-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:
-      - .env.docker
+      - ./apps/web/.env.docker
     environment:
       - NODE_ENV=production
-      - LEMU_AUTH_URL=http://rovio-lemu-auth:5000
+      - API_URL=http://rovio-api:5000
     depends_on:
-      lemu-auth:
+      rovio-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
@@ -25,17 +25,17 @@ services:
       retries: 3
       start_period: 30s
 
-  # ─── lemu-auth (Express) ──────────────────────────────────────
-  lemu-auth:
+  # ─── Rovio API (Express) ─────────────────────────────────────
+  rovio-api:
     build:
-      context: ../lemu-auth
+      context: ./apps/api
       dockerfile: Dockerfile
-    container_name: rovio-lemu-auth
+    container_name: rovio-api
     restart: unless-stopped
     ports:
       - "5000:5000"
     env_file:
-      - ../lemu-auth/.env.docker
+      - ./apps/api/.env.docker
     environment:
       - NODE_ENV=production
     depends_on:
@@ -49,15 +49,16 @@ services:
       retries: 3
       start_period: 30s
 
-  lemu-worker:
+  # ─── Mail Worker ──────────────────────────────────────────────
+  rovio-worker:
     build:
-      context: ../lemu-auth
+      context: ./apps/api
       dockerfile: Dockerfile
-    container_name: rovio-lemu-worker
+    container_name: rovio-worker
     restart: unless-stopped
-    command: ["node", "src/delivery/workers/mail.worker.js"]
+    command: ["node", "dist/delivery/workers/mail.worker.js"]
     env_file:
-      - ../lemu-auth/.env.docker
+      - ./apps/api/.env.docker
     environment:
       - NODE_ENV=production
     depends_on:

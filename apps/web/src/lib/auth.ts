@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const AUTH_URL = process.env.LEMU_AUTH_URL || "http://localhost:5000";
-const API_KEY = process.env.LEMU_API_KEY || "";
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 export type User = {
@@ -19,53 +18,42 @@ export type AuthResult = {
   };
 };
 
-function headers() {
-  return {
-    "Content-Type": "application/json",
-    ...(API_KEY ? { "x-api-key": API_KEY } : {}),
-  };
-}
-
 export async function login(email: string, password: string): Promise<AuthResult> {
-  const res = await fetch(`${AUTH_URL}/api/v1/auth/login`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/login`, {
     method: "POST",
-    headers: headers(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  return data;
+  return res.json();
 }
 
 export async function register(name: string, email: string, password: string): Promise<AuthResult> {
-  const res = await fetch(`${AUTH_URL}/api/v1/auth/register`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/register`, {
     method: "POST",
-    headers: headers(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
-  const data = await res.json();
-  return data;
+  return res.json();
 }
 
 export async function verifyEmail(token: string): Promise<AuthResult> {
-  const res = await fetch(`${AUTH_URL}/api/v1/auth/verify-email`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/verify-email`, {
     method: "POST",
-    headers: headers(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  const data = await res.json();
-  return data;
+  return res.json();
 }
 
 export async function logout(token: string): Promise<AuthResult> {
-  const res = await fetch(`${AUTH_URL}/api/v1/auth/logout`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/logout`, {
     method: "POST",
     headers: {
-      ...headers(),
+      "Content-Type": "application/json",
       Cookie: `token=${token}`,
     },
   });
-  const data = await res.json();
-  return data;
+  return res.json();
 }
 
 export type DecodedToken = {

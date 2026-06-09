@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { csrfGuard } from "@/lib/csrf";
 
-const AUTH_URL = process.env.LEMU_AUTH_URL || "http://localhost:5000";
-const API_KEY = process.env.LEMU_API_KEY || "";
+const API_URL = process.env.API_URL || "http://localhost:5000";
 
 const schema = z.object({
   credential: z.string().min(1),
@@ -26,12 +25,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message }, { status: 400 });
   }
 
-  const res = await fetch(`${AUTH_URL}/api/v1/auth/google`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/google`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(API_KEY ? { "x-api-key": API_KEY } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ credential: parsed.data.credential }),
   });
 
