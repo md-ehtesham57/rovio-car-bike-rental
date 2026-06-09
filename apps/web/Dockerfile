@@ -1,7 +1,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --include=dev && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 FROM node:22-alpine AS builder
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID

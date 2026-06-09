@@ -25,11 +25,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message }, { status: 400 });
   }
 
-  const res = await fetch(`${API_URL}/api/v1/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ credential: parsed.data.credential }),
-  });
+  let res;
+  try {
+    res = await fetch(`${API_URL}/api/v1/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: parsed.data.credential }),
+    });
+  } catch {
+    return NextResponse.json(
+      { success: false, message: "Authentication service unavailable. Please try again later." },
+      { status: 503 },
+    );
+  }
 
   const data = await res.json();
 

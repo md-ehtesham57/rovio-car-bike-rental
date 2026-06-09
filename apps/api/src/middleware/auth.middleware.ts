@@ -1,39 +1,77 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { env } from "../config";
-import { tokenBlacklist } from "../db/redis";
-import type { UserPayload } from "../types";
+import { config } from "../config";
+import { AuthRequest, JwtPayload, fail } from "../types";
+import { redis } from "../db/redis";
 
-export async function authenticate(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.token;
+// ─── JWT authenticate ─────────────────────────────────────────────────────────
+
+export async function authenticate(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const token =
+    req.cookies?.token ||
+    req.headers.authorization?.replace("Bearer ", "");
+
   if (!token) {
-    return res.status(401).json({ success: false, message: "Not authenticated" });
+    res.status(401).json(fail("Authentication required"));
+    return;
   }
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
+    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
 
-    if (decoded.jti) {
-      const blacklisted = await tokenBlacklist.isBlacklisted(decoded.jti);
-      if (blacklisted) {
-        return res.status(401).json({ success: false, message: "Token has been revoked" });
-      }
+    // Check revocation list (logout blacklist)
+    const revoked = await redis.get(`revoked:${payload.jti}`);
+    if (revoked) {
+      res.status(401).json(fail("Token has been revoked"));
+      return;
     }
 
-    req.user = decoded;
+    req.user = payload;
     next();
-  } catch {
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      res.status(401).json(fail("Token expired"));
+    } else {
+      res.status(401).json(fail("Invalid token"));
+    }
   }
 }
 
-export function apiKeyGuard(req: Request, _res: Response, next: NextFunction) {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return next();
+// ─── Role guard — call AFTER authenticate ─────────────────────────────────────
 
-  const providedKey = req.headers["x-api-key"];
-  if (providedKey && providedKey === apiKey) {
-    req.isApiRequest = true;
+export function requireRole(...roles: Array<"user" | "admin">) {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json(fail("Authentication required"));
+      return;
+    }
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json(fail("Insufficient permissions"));
+      return;
+    }
+    next();
+  };
+}
+
+/** Convenience — require admin role */
+export const requireAdmin = [authenticate, requireRole("admin")];
+
+// ─── Internal API key guard (Next.js → API service calls) ─────────────────────
+
+export function apiKeyGuard(
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction,
+): void {
+  if (!config.apiKey) return next();
+
+  const key = req.headers["x-api-key"];
+  if (key === config.apiKey) {
+    (req as any).isApiRequest = true;
   }
 
   next();

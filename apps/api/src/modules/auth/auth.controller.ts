@@ -3,16 +3,15 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { AuthService } from "./auth.service";
 import { tokenBlacklist } from "../../db/redis";
-import { env } from "../../config";
-import type { UserPayload } from "../../types";
+import { config } from "../../config";
 
 const authService = new AuthService();
 
-function generateToken(user: { id: string; email: string; name: string }) {
+function generateToken(user: { id: string; email: string; name: string; picture?: string }) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name, jti: crypto.randomUUID() } satisfies UserPayload,
-    env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { id: user.id, email: user.email, name: user.name, picture: user.picture, jti: crypto.randomUUID(), role: "user" },
+    config.jwtSecret,
+    { expiresIn: "24h" }
   );
 }
 
@@ -37,7 +36,7 @@ export const authController = {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: env.NODE_ENV === "production",
+        secure: config.isProd(),
         sameSite: "strict",
         maxAge: 24 * 60 * 60 * 1000,
       });
@@ -48,7 +47,7 @@ export const authController = {
         data: { user: { id: user.id, name: user.name, email: user.email } },
       };
 
-      if (req.isApiRequest) {
+      if ((req as any).isApiRequest) {
         responseData.data = { ...(responseData.data as object), token };
       }
 
@@ -65,7 +64,7 @@ export const authController = {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: env.NODE_ENV === "production",
+        secure: config.isProd(),
         sameSite: "strict",
         maxAge: 24 * 60 * 60 * 1000,
       });
@@ -76,7 +75,7 @@ export const authController = {
         data: { user: { id: user.id, name: user.name, email: user.email, picture: user.picture } },
       };
 
-      if (req.isApiRequest) {
+      if ((req as any).isApiRequest) {
         responseData.data = { ...(responseData.data as object), token };
       }
 
@@ -91,7 +90,7 @@ export const authController = {
       const token = req.cookies?.token;
       if (token) {
         try {
-          const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
+          const decoded = jwt.verify(token, config.jwtSecret) as any;
           if (decoded.jti) {
             await tokenBlacklist.add(decoded.jti, 86400);
           }
@@ -102,7 +101,7 @@ export const authController = {
 
       res.clearCookie("token", {
         httpOnly: true,
-        secure: env.NODE_ENV === "production",
+        secure: config.isProd(),
         sameSite: "strict",
       });
 

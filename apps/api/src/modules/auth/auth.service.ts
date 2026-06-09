@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import { User, IUser } from "./user.model";
+import { User } from "./user.model";
 import { addMailJob } from "../../delivery/queues/mail.queue";
-import { env } from "../../config";
+import { config } from "../../config";
 
-const googleClient = env.GOOGLE_CLIENT_ID
-  ? new OAuth2Client(env.GOOGLE_CLIENT_ID)
+const googleClient = config.googleClientId
+  ? new OAuth2Client(config.googleClientId)
   : null;
 
 export class AuthService {
@@ -26,7 +26,7 @@ export class AuthService {
       email: data.email,
       password: hashedPassword,
       verificationToken: hashedVerificationToken,
-      verificationTokenExpires: Date.now() + 3600000,
+      verificationTokenExpires: new Date(Date.now() + 3600000),
     });
 
     try {
@@ -53,7 +53,7 @@ export class AuthService {
 
     const isMatch = await bcrypt.compare(data.password, user.password);
     if (!isMatch) {
-      await this._incrementAttempts(user);
+      await this._incrementAttempts(user._id.toString());
       throw new Error("INVALID_CREDENTIALS");
     }
 
@@ -69,7 +69,7 @@ export class AuthService {
 
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
-      audience: env.GOOGLE_CLIENT_ID,
+      audience: config.googleClientId,
     });
 
     const payload = ticket.getPayload()!;
@@ -172,18 +172,18 @@ export class AuthService {
     return { message: "Password reset successfully" };
   }
 
-  private async _incrementAttempts(user: IUser) {
+  private async _incrementAttempts(userId: string) {
     const MAX_ATTEMPTS = 5;
     const LOCK_DURATION = 30 * 60 * 1000;
 
     const updated = await User.findByIdAndUpdate(
-      user._id,
+      userId,
       { $inc: { loginAttempts: 1 } },
       { new: true }
     );
 
     if (updated && updated.loginAttempts >= MAX_ATTEMPTS) {
-      await User.findByIdAndUpdate(user._id, {
+      await User.findByIdAndUpdate(userId, {
         $set: { lockUntil: new Date(Date.now() + LOCK_DURATION) },
       });
     }

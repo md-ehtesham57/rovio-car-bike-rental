@@ -18,42 +18,44 @@ export type AuthResult = {
   };
 };
 
+async function apiFetch(path: string, options: RequestInit = {}): Promise<AuthResult> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...options.headers },
+    });
+    return res.json();
+  } catch {
+    return { success: false, message: "Service unavailable. Please try again later." };
+  }
+}
+
 export async function login(email: string, password: string): Promise<AuthResult> {
-  const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+  return apiFetch("/api/v1/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
 }
 
 export async function register(name: string, email: string, password: string): Promise<AuthResult> {
-  const res = await fetch(`${API_URL}/api/v1/auth/register`, {
+  return apiFetch("/api/v1/auth/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
-  return res.json();
 }
 
 export async function verifyEmail(token: string): Promise<AuthResult> {
-  const res = await fetch(`${API_URL}/api/v1/auth/verify-email`, {
+  return apiFetch("/api/v1/auth/verify-email", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  return res.json();
 }
 
 export async function logout(token: string): Promise<AuthResult> {
-  const res = await fetch(`${API_URL}/api/v1/auth/logout`, {
+  return apiFetch("/api/v1/auth/logout", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `token=${token}`,
-    },
+    headers: { Cookie: `token=${token}` },
   });
-  return res.json();
 }
 
 export type DecodedToken = {
