@@ -1,34 +1,58 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
+
+export type VehicleCategory = "Cars" | "Bikes" | "Luxury" | "SUV";
+export type FuelType        = "Petrol" | "Diesel" | "Electric" | "Hybrid";
+export type TransmissionType = "Auto" | "Manual";
+export type VehicleStatus   = "active" | "inactive" | "pending_review";
 
 export interface IVehicle extends Document {
-  name: string;
-  type: "car" | "bike";
-  brand: string;
-  description: string;
-  image: string;
-  pricePerDay: number;
-  seats?: number;
-  transmission?: "manual" | "automatic";
-  fuelType?: "petrol" | "diesel" | "electric";
-  isAvailable: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  _id:          mongoose.Types.ObjectId;
+  sellerId:     mongoose.Types.ObjectId;   // owner (user with role seller/admin)
+  name:         string;
+  brand:        string;
+  type:         string;
+  emoji:        string;
+  pricePerDay:  number;
+  tag?:         string;
+  fuel:         FuelType;
+  seats:        number;
+  cc?:          string;
+  transmission: TransmissionType;
+  categories:   VehicleCategory[];
+  description:  string;
+  status:       VehicleStatus;
+  available:    boolean;
+  location?:    string;
+  createdAt:    Date;
+  updatedAt:    Date;
 }
 
-const vehicleSchema = new Schema<IVehicle>(
+const VehicleSchema = new Schema<IVehicle>(
   {
-    name: { type: String, required: true },
-    type: { type: String, enum: ["car", "bike"], required: true },
-    brand: { type: String, required: true },
-    description: { type: String },
-    image: { type: String },
-    pricePerDay: { type: Number, required: true },
-    seats: { type: Number },
-    transmission: { type: String, enum: ["manual", "automatic"] },
-    fuelType: { type: String, enum: ["petrol", "diesel", "electric"] },
-    isAvailable: { type: Boolean, default: true },
+    sellerId:     { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    name:         { type: String, required: true, trim: true, maxlength: 100 },
+    brand:        { type: String, required: true, trim: true, maxlength: 100 },
+    type:         { type: String, required: true, trim: true },
+    emoji:        { type: String, required: true, maxlength: 10 },
+    pricePerDay:  { type: Number, required: true, min: 0 },
+    tag:          { type: String, trim: true, maxlength: 50 },
+    fuel:         { type: String, enum: ["Petrol", "Diesel", "Electric", "Hybrid"], required: true },
+    seats:        { type: Number, required: true, min: 1, max: 20 },
+    cc:           { type: String, trim: true, maxlength: 20 },
+    transmission: { type: String, enum: ["Auto", "Manual"], required: true },
+    categories:   [{ type: String, enum: ["Cars", "Bikes", "Luxury", "SUV"] }],
+    description:  { type: String, required: true, trim: true, maxlength: 500 },
+    status:       { type: String, enum: ["active", "inactive", "pending_review"], default: "pending_review" },
+    available:    { type: Boolean, default: true },
+    location:     { type: String, trim: true, maxlength: 100 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const Vehicle = mongoose.models.Vehicle || mongoose.model<IVehicle>("Vehicle", vehicleSchema);
+VehicleSchema.index({ sellerId: 1 });
+VehicleSchema.index({ categories: 1 });
+VehicleSchema.index({ available: 1, status: 1 });
+VehicleSchema.index({ pricePerDay: 1 });
+VehicleSchema.index({ name: "text", brand: "text", description: "text" });
+
+export const Vehicle = mongoose.model<IVehicle>("Vehicle", VehicleSchema);

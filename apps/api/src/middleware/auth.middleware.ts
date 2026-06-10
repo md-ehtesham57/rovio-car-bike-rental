@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config";
 import { AuthRequest, JwtPayload, fail } from "../types";
 import { redis } from "../db/redis";
+import { User } from "../modules/auth/user.model";
 
 // ─── JWT authenticate ─────────────────────────────────────────────────────────
 
@@ -30,6 +31,13 @@ export async function authenticate(
       return;
     }
 
+    // Real-time ban check — catches bans issued after JWT was issued
+    const user = await User.findById(payload.id).select("isBanned").lean();
+    if (user?.isBanned) {
+      res.status(403).json(fail("Your account has been banned"));
+      return;
+    }
+
     req.user = payload;
     next();
   } catch (err) {
@@ -43,7 +51,7 @@ export async function authenticate(
 
 // ─── Role guard — call AFTER authenticate ─────────────────────────────────────
 
-export function requireRole(...roles: Array<"user" | "admin">) {
+export function requireRole(...roles: Array<"user" | "admin" | "seller">) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json(fail("Authentication required"));

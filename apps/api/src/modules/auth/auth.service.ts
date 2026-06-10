@@ -1,191 +1,248 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import { User } from "./user.model";
-import { addMailJob } from "../../delivery/queues/mail.queue";
 import { config } from "../../config";
+import { redis } from "../../db/redis";
+import { User } from "./user.model";
+import { AppError } from "../../middleware/error.middleware";
+import { mailQueue } from "../../delivery/queues/mail.queue";
+import type { JwtPayload } from "../../types";
 
 const googleClient = config.googleClientId
   ? new OAuth2Client(config.googleClientId)
   : null;
 
-export class AuthService {
-  async register(data: { name: string; email: string; password: string }) {
-    const existing = await User.findOne({ email: data.email });
-    if (existing) throw new Error("USER_ALREADY_EXISTS");
+const TOKEN_TTL     = 24 * 60 * 60;   // 24 h
+const LOCK_WINDOW   = 15 * 60 * 1000; // 15 min
+const MAX_ATTEMPTS  = 5;
 
-    const hashedPassword = await bcrypt.hash(data.password, 12);
-    const verificationToken = String(crypto.randomInt(100000, 999999));
-    const hashedVerificationToken = crypto
-      .createHash("sha256")
-      .update(verificationToken)
-      .digest("hex");
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-    const user = await User.create({
-      name: data.name,
-      email: data.email,
-      password: hashedPassword,
-      verificationToken: hashedVerificationToken,
-      verificationTokenExpires: new Date(Date.now() + 3600000),
-    });
+function signToken(payload: Omit<JwtPayload, "jti">): string {
+  const jti = uuidv4();
+  return jwt.sign({ ...payload, jti }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn as jwt.SignOptions["expiresIn"],
+  });
+}
 
-    try {
-      await addMailJob({
-        type: "verification",
-        email: user.email,
-        name: user.name,
-        token: verificationToken,
-      });
-    } catch (err) {
-      console.error("Failed to queue email:", (err as Error).message);
-    }
+function sanitizeUser(user: {
+  _id: { toString(): string };
+  name: string;
+  email: string;
+  role: string;
+  picture?: string;
+  emailVerified?: boolean;
+  isBanned?: boolean;
+  lastLoginAt?: Date;
+}) {
+  return {
+    id:            user._id.toString(),
+    name:          user.name,
+    email:         user.email,
+    role:          user.role as "user" | "admin" | "seller",
+    picture:       user.picture,
+    emailVerified: user.emailVerified,
+    isBanned:      user.isBanned ?? false,
+    lastLoginAt:   user.lastLoginAt,
+  };
+}
 
-    return { id: user._id.toString(), name: user.name, email: user.email, otp: verificationToken };
-  }
+// ─── Register ─────────────────────────────────────────────────────────────────
 
-  async login(data: { email: string; password: string }) {
-    const user = await User.findOne({ email: data.email });
-    if (!user) throw new Error("INVALID_CREDENTIALS");
+export async function register(name: string, email: string, password: string) {
+  const existing = await User.findOne({ email });
+  if (existing) throw new AppError("Email already registered", 409);
 
-    if (user.lockUntil && user.lockUntil > new Date()) {
-      throw new Error("ACCOUNT_LOCKED");
-    }
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await User.create({
+    name, email, passwordHash,
+    emailVerified: true,
+  });
 
-    const isMatch = await bcrypt.compare(data.password, user.password);
-    if (!isMatch) {
-      await this._incrementAttempts(user._id.toString());
-      throw new Error("INVALID_CREDENTIALS");
-    }
+  const safe = sanitizeUser(user);
+  const token = signToken(safe);
+  return { user: safe, token };
+}
 
-    await User.findByIdAndUpdate(user._id, { $set: { loginAttempts: 0, lockUntil: null } });
+// ─── Login ────────────────────────────────────────────────────────────────────
 
-    if (!user.isVerified) throw new Error("EMAIL_NOT_VERIFIED");
+export async function login(email: string, password: string) {
+  const user = await User.findOne({ email }).select(
+    "+passwordHash +loginAttempts +lockUntil",
+  );
+  if (!user || !user.passwordHash) throw new AppError("Invalid credentials", 401);
 
-    return { id: user._id.toString(), name: user.name, email: user.email };
-  }
-
-  async googleLogin(credential: string) {
-    if (!googleClient) throw new Error("Google OAuth is not configured");
-
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: config.googleClientId,
-    });
-
-    const payload = ticket.getPayload()!;
-    const { sub: googleId, email, name, picture } = payload;
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      const randomPassword = crypto.randomBytes(32).toString("hex");
-      const hashedPassword = await bcrypt.hash(randomPassword, 12);
-
-      user = await User.create({
-        name: name || email!.split("@")[0],
-        email,
-        password: hashedPassword,
-        isVerified: true,
-        googleId,
-        picture,
-      });
-    }
-
-    if (!user.isVerified) {
-      await User.findByIdAndUpdate(user._id, {
-        $set: { isVerified: true, verificationToken: null, verificationTokenExpires: null },
-      });
-    }
-
-    return {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      picture: user.picture || picture,
-    };
-  }
-
-  async verifyEmail(token: string) {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await User.findOne({ verificationToken: hashedToken });
-
-    if (!user) throw new Error("INVALID_OR_EXPIRED_VERIFICATION_TOKEN");
-
-    if (user.verificationTokenExpires && user.verificationTokenExpires < new Date()) {
-      throw new Error("INVALID_OR_EXPIRED_VERIFICATION_TOKEN");
-    }
-
-    await User.findByIdAndUpdate(user._id, {
-      $set: { isVerified: true, verificationToken: null, verificationTokenExpires: null },
-    });
-
-    return { message: "Email verified successfully" };
-  }
-
-  async forgotPassword(email: string) {
-    const user = await User.findOne({ email });
-    if (!user) return { message: "If that email exists, a reset link has been sent." };
-
-    const resetToken = String(crypto.randomInt(100000, 999999));
-    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-
-    await User.findByIdAndUpdate(user._id, {
-      $set: {
-        passwordResetToken: hashedToken,
-        passwordResetExpires: new Date(Date.now() + 3600000),
-      },
-    });
-
-    try {
-      await addMailJob({
-        type: "password-reset",
-        email: user.email,
-        name: user.name,
-        token: resetToken,
-      });
-    } catch (err) {
-      console.error("Failed to queue password reset email:", (err as Error).message);
-    }
-
-    return { message: "If that email exists, a reset link has been sent." };
-  }
-
-  async resetPassword(token: string, password: string) {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await User.findOne({ passwordResetToken: hashedToken });
-
-    if (!user) throw new Error("INVALID_OR_EXPIRED_RESET_TOKEN");
-
-    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
-      throw new Error("INVALID_OR_EXPIRED_RESET_TOKEN");
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-    await User.findByIdAndUpdate(user._id, {
-      $set: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
-
-    return { message: "Password reset successfully" };
-  }
-
-  private async _incrementAttempts(userId: string) {
-    const MAX_ATTEMPTS = 5;
-    const LOCK_DURATION = 30 * 60 * 1000;
-
-    const updated = await User.findByIdAndUpdate(
-      userId,
-      { $inc: { loginAttempts: 1 } },
-      { new: true }
+  // Brute-force check
+  if (user.isLocked()) {
+    const remainMs = user.lockUntil!.getTime() - Date.now();
+    const remainMin = Math.ceil(remainMs / 60000);
+    throw new AppError(
+      `Account locked due to too many failed attempts. Try again in ${remainMin} minute${remainMin !== 1 ? "s" : ""}.`,
+      423,
     );
-
-    if (updated && updated.loginAttempts >= MAX_ATTEMPTS) {
-      await User.findByIdAndUpdate(userId, {
-        $set: { lockUntil: new Date(Date.now() + LOCK_DURATION) },
-      });
-    }
   }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+
+  if (!valid) {
+    const attempts = (user.loginAttempts || 0) + 1;
+    const update: Record<string, unknown> = { loginAttempts: attempts };
+    if (attempts >= MAX_ATTEMPTS) {
+      update.lockUntil = new Date(Date.now() + LOCK_WINDOW);
+    }
+    await User.findByIdAndUpdate(user._id, update);
+    const remaining = MAX_ATTEMPTS - attempts;
+    if (remaining <= 0) {
+      throw new AppError("Account locked for 15 minutes due to too many failed attempts.", 423);
+    }
+    throw new AppError(`Invalid credentials. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining.`, 401);
+  }
+
+  // Reset on success
+  await User.findByIdAndUpdate(user._id, {
+    loginAttempts: 0,
+    $unset: { lockUntil: 1 },
+    lastLoginAt: new Date(),
+  });
+
+  const safe = sanitizeUser(user);
+  const token = signToken(safe);
+  return { user: safe, token };
+}
+
+// ─── Google OAuth ─────────────────────────────────────────────────────────────
+
+export async function googleAuth(credential: string) {
+  if (!googleClient) throw new AppError("Google OAuth is not configured", 500);
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken:  credential,
+    audience: config.googleClientId,
+  });
+
+  const payload = ticket.getPayload();
+  if (!payload?.email) throw new AppError("Invalid Google token", 400);
+
+  let user = await User.findOne({ email: payload.email });
+
+  if (user) {
+    if (!user.googleId) {
+      user.googleId       = payload.sub;
+      user.picture        = payload.picture;
+      user.emailVerified  = true;
+      user.lastLoginAt    = new Date();
+      await user.save();
+    } else {
+      await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+    }
+  } else {
+    user = await User.create({
+      name:          payload.name || payload.email.split("@")[0],
+      email:         payload.email,
+      googleId:      payload.sub,
+      picture:       payload.picture,
+      emailVerified: true,
+      lastLoginAt:   new Date(),
+    });
+  }
+
+  const safe = sanitizeUser(user);
+  const token = signToken(safe);
+  return { user: safe, token };
+}
+
+// ─── Admin login (email/password only, no Google, stricter) ──────────────────
+
+export async function adminLogin(email: string, password: string) {
+  const user = await User.findOne({ email, role: "admin" }).select(
+    "+passwordHash +loginAttempts +lockUntil",
+  );
+
+  // Constant-time guard — don't reveal whether admin exists
+  if (!user || !user.passwordHash) {
+    await bcrypt.compare(password, "$2b$12$invalidhashpadding000000000000000000000000000000000000");
+    throw new AppError("Invalid credentials", 401);
+  }
+
+  if (user.isLocked()) {
+    throw new AppError("Account temporarily locked. Please try again later.", 423);
+  }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) {
+    const attempts = (user.loginAttempts || 0) + 1;
+    const update: Record<string, unknown> = { loginAttempts: attempts };
+    if (attempts >= MAX_ATTEMPTS) update.lockUntil = new Date(Date.now() + LOCK_WINDOW);
+    await User.findByIdAndUpdate(user._id, update);
+    throw new AppError("Invalid credentials", 401);
+  }
+
+  await User.findByIdAndUpdate(user._id, {
+    loginAttempts: 0,
+    $unset: { lockUntil: 1 },
+    lastLoginAt: new Date(),
+  });
+
+  const safe = sanitizeUser(user);
+  const token = signToken(safe);
+  return { user: safe, token };
+}
+
+// ─── Logout ───────────────────────────────────────────────────────────────────
+
+export async function logout(token: string) {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    const decoded = jwt.decode(token) as { exp?: number } | null;
+    const ttl = decoded?.exp
+      ? decoded.exp - Math.floor(Date.now() / 1000)
+      : TOKEN_TTL;
+    if (ttl > 0) await redis.setex(`revoked:${payload.jti}`, ttl, "1");
+  } catch {
+    // Already invalid — nothing to revoke
+  }
+}
+
+// ─── Forgot / Reset password ──────────────────────────────────────────────────
+
+export async function forgotPassword(email: string) {
+  const user = await User.findOne({ email });
+  // Always respond the same to prevent email enumeration
+  if (!user) return;
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  await User.findByIdAndUpdate(user._id, {
+    passwordResetToken:   hashedToken,
+    passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 h
+  });
+
+  const resetUrl = `${config.appUrl}/reset-password?token=${rawToken}`;
+  await mailQueue.add("send-mail", {
+    type: "password-reset",
+    email,
+    name: user.name,
+    token: resetUrl,
+  }, { attempts: 3, backoff: { type: "exponential", delay: 1000 } });
+}
+
+export async function resetPassword(rawToken: string, newPassword: string) {
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  const user = await User.findOne({
+    passwordResetToken:   hashedToken,
+    passwordResetExpires: { $gt: new Date() },
+  }).select("+passwordResetToken +passwordResetExpires");
+
+  if (!user) throw new AppError("Reset token is invalid or has expired", 400);
+
+  user.passwordHash         = await bcrypt.hash(newPassword, 12);
+  user.passwordResetToken   = undefined;
+  user.passwordResetExpires = undefined;
+  user.loginAttempts        = 0;
+  user.lockUntil            = undefined;
+  await user.save();
 }

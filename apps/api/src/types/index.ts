@@ -22,8 +22,9 @@ export interface JwtPayload {
   id: string;
   email: string;
   name: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "seller";
   picture?: string;
+  isBanned?: boolean;
   jti: string;
   iat?: number;
   exp?: number;

@@ -1,38 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || ""
-);
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "");
 
-async function verifyTokenEdge(token: string): Promise<{ id: string } | null> {
+type TokenPayload = { id: string; role?: string };
+
+async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { id: string };
+    return payload as TokenPayload;
   } catch {
     return null;
   }
 }
 
-const protectedRoutes = ["/profile"];
-const authRoutes = ["/login", "/register"];
+const protectedRoutes = ["/profile", "/bookings"];
+const authRoutes      = ["/login", "/register"];
+const adminRoutes     = ["/admin/dashboard", "/admin/profile", "/admin/users", "/admin/vehicles", "/admin/bookings"];
+const sellerRoutes    = ["/seller/dashboard", "/seller/vehicles"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("token")?.value;
+  const payload = token ? await verifyToken(token) : null;
 
-  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
-  const isAuth = authRoutes.some((route) => pathname.startsWith(route));
-
-  if (isProtected) {
-    if (!token || !(await verifyTokenEdge(token))) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+  // ─── Admin routes — must be authenticated + admin role ──────────────────────
+  if (adminRoutes.some((r) => pathname.startsWith(r))) {
+    if (!payload) {
+      const url = new URL("/admin/login", request.url);
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
+    if (payload.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
   }
 
-  if (isAuth && token && (await verifyTokenEdge(token))) {
+  // ─── Admin login — redirect to dashboard if already admin ───────────────────
+  if (pathname === "/admin/login") {
+    if (payload?.role === "admin") {
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // ─── Seller routes — must be authenticated + seller/admin role ──────────────
+  if (sellerRoutes.some((r) => pathname.startsWith(r))) {
+    if (!payload) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+    if (payload.role !== "seller" && payload.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // ─── Standard protected routes ───────────────────────────────────────────────
+  if (protectedRoutes.some((r) => pathname.startsWith(r))) {
+    if (!payload) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // ─── Auth routes — redirect if already logged in ─────────────────────────────
+  if (authRoutes.some((r) => pathname.startsWith(r)) && payload) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -40,5 +77,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/login", "/register"],
+  matcher: [
+    "/profile/:path*",
+    "/bookings/:path*",
+    "/login",
+    "/register",
+    "/admin/:path*",
+    "/seller/:path*",
+  ],
 };

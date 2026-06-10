@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, message: "Invalid or expired token" }, { status: 401 });
   }
 
+  const user = decoded as DecodedToken;
   return NextResponse.json({
     success: true,
     data: {
@@ -20,7 +21,9 @@ export async function GET(request: NextRequest) {
         id: decoded.id,
         name: decoded.name,
         email: decoded.email,
-        picture: (decoded as DecodedToken).picture,
+        role: user.role || "user",
+        picture: user.picture,
+        emailVerified: user.emailVerified,
       },
     },
   });

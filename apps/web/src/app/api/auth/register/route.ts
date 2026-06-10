@@ -29,5 +29,17 @@ export async function POST(request: NextRequest) {
   const { name, email, password } = parsed.data;
   const result = await register(name, email, password);
 
-  return NextResponse.json(result, { status: result.success ? 201 : 400 });
+  const response = NextResponse.json(result, { status: result.success ? 201 : 400 });
+
+  if (result.success && result.data?.token) {
+    response.cookies.set("token", result.data.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24,
+      path: "/",
+    });
+  }
+
+  return response;
 }

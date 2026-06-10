@@ -1,0 +1,103 @@
+services:
+
+  # ─── Rovio Web (Next.js — dev mode with hot reload) ────────────
+  rovio-web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    container_name: rovio-web-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./apps/web/.env.docker
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://rovio-api:5000
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      rovio-api:
+        condition: service_started
+
+  # ─── Rovio API (Express — dev mode with hot reload) ────────────
+  rovio-api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: rovio-api-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./apps/api/.env.docker
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongodb:27017/rovio
+      - REDIS_HOST=redis
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─── Mail Worker (dev mode with hot reload) ─────────────────────
+  rovio-worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: rovio-worker-dev
+    restart: unless-stopped
+    command: ["npx", "tsx", "watch", "src/delivery/workers/mail.worker.ts"]
+    env_file:
+      - ./apps/api/.env.docker
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongodb:27017/rovio
+      - REDIS_HOST=redis
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ─── MongoDB ──────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: rovio-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  # ─── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: rovio-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongodb_data:
+  redis_data:

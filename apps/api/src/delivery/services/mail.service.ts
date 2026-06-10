@@ -7,31 +7,9 @@ if (env.RESEND_API_KEY && env.RESEND_API_KEY !== "your_resend_api_key") {
 }
 
 export const mailService = {
-  async sendVerificationEmail(email: string, name: string, token: string) {
-    if (!resend) {
-      console.log(`[MOCK EMAIL] to: ${email} | Name: ${name} | OTP: ${token}`);
-      return true;
-    }
-
-    const { error } = await resend.emails.send({
-      from: env.MAIL_FROM,
-      to: email,
-      subject: "Your OTP Code",
-      text: `Hello ${name},\n\nYour verification code is: ${token}\n\nEnter this code to verify your account.\n\nThis code expires in 1 hour.`,
-      html: `<p>Hello ${name},</p><p>Your verification code is:</p><p style="font-size:24px;font-weight:bold;letter-spacing:4px;color:#E11D48">${token}</p><p>Enter this code to verify your account.</p><p>This code expires in 1 hour.</p>`,
-    });
-
-    if (error) {
-      console.error("Resend Error:", error);
-      throw new Error("ERR_EMAIL_SEND_FAILED");
-    }
-
-    console.log(`Verification email sent to ${email}`);
-  },
-
   async sendPasswordResetEmail(email: string, token: string) {
     if (!resend) {
-      console.log(`[MOCK EMAIL] Password reset to: ${email} | OTP: ${token}`);
+      console.log(`[MOCK EMAIL] Password reset to: ${email} | token: ${token}`);
       return true;
     }
 

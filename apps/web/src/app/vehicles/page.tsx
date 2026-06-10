@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,7 @@ type SortOption = "recommended" | "price-asc" | "price-desc";
 
 interface Vehicle {
   id: number;
+  _id?: string;
   name: string;
   brand: string;
   type: string;
@@ -26,7 +27,7 @@ interface Vehicle {
   description: string;
 }
 
-const VEHICLES: Vehicle[] = [
+const MOCK_VEHICLES: Vehicle[] = [
   { id: 1,  name: "Roma",        brand: "Ferrari",       type: "Sports Car",   emoji: "🏎️", price: 12000, tag: "Hot",         fuel: "Petrol", seats: 2, transmission: "Auto",   categories: ["All","Cars","Luxury"], description: "560hp Italian masterpiece. Turn heads on every road." },
   { id: 2,  name: "5 Series",    brand: "BMW",           type: "Sedan",        emoji: "🚗", price: 8000,  tag: "Luxury",      fuel: "Diesel", seats: 5, transmission: "Auto",   categories: ["All","Cars","Luxury"], description: "Executive comfort meets driving precision." },
   { id: 3,  name: "E-Class",     brand: "Mercedes-Benz", type: "Luxury Sedan", emoji: "🚗", price: 9500,  tag: "Luxury",      fuel: "Diesel", seats: 5, transmission: "Auto",   categories: ["All","Cars","Luxury"], description: "Refined luxury with cutting-edge technology." },
@@ -41,6 +42,25 @@ const VEHICLES: Vehicle[] = [
   { id: 12, name: "Activa 6G",  brand: "Honda",         type: "Scooter",      emoji: "🛵", price: 600,   tag: "Best Seller", fuel: "Petrol", seats: 2, cc: "110cc", transmission: "Auto",   categories: ["All","Bikes"], description: "India's best-selling scooter. Easy, efficient, reliable." },
   { id: 13, name: "Splendor+",  brand: "Hero",          type: "Commuter",     emoji: "🏍️", price: 500,                       fuel: "Petrol", seats: 2, cc: "100cc", transmission: "Manual", categories: ["All","Bikes"], description: "Lightweight, fuel-efficient daily commuter." },
 ];
+
+function mapApiVehicle(v: any): Vehicle {
+  return {
+    id: v._id ? parseInt(v._id.toString().slice(-6), 16) : 0,
+    _id: v._id?.toString(),
+    name: v.name,
+    brand: v.brand,
+    type: v.type,
+    emoji: v.emoji,
+    price: v.pricePerDay,
+    tag: v.tag,
+    fuel: v.fuel,
+    seats: v.seats,
+    cc: v.cc,
+    transmission: v.transmission,
+    categories: ["All", ...(v.categories || [])] as Category[],
+    description: v.description,
+  };
+}
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
@@ -229,13 +249,30 @@ function Footer() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VehiclesPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [active, setActive] = useState<Category>("All");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const res = await fetch("/api/vehicles");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data?.items)) {
+          const api = json.data.items.map(mapApiVehicle);
+          setVehicles((prev) => [...api, ...prev]);
+        }
+      } catch {
+        // fallback to mock
+      }
+    };
+    fetchVehicles();
+  }, []);
+
   const categories: Category[] = ["All", "Cars", "Bikes", "Luxury", "SUV"];
 
-  const filtered = VEHICLES
+  const filtered = vehicles
     .filter((v) => v.categories.includes(active))
     .filter((v) =>
       search === "" ||
@@ -263,7 +300,7 @@ export default function VehiclesPage() {
                 Browse vehicles
               </h1>
               <p className="text-white/35 text-[13px] mt-2.5 leading-[1.6]">
-                {VEHICLES.length} vehicles available · Hand-picked, insured & road-ready
+                {MOCK_VEHICLES.length} vehicles available · Hand-picked, insured & road-ready
               </p>
             </div>
 

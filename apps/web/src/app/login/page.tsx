@@ -21,11 +21,11 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const err = await login(email, password);
-    if (!err) {
-      router.push(redirect);
+    const result = await login(email, password);
+    if (!result.error) {
+      router.push(result.role === "admin" ? "/admin/dashboard" : redirect);
     } else {
-      setError(err);
+      setError(result.error);
     }
     setBusy(false);
   };
@@ -33,11 +33,11 @@ function LoginForm() {
   const handleGoogleSuccess = useCallback(async (response: CredentialResponse) => {
     if (!response.credential) return;
     setError(null);
-    const err = await googleLogin(response.credential);
-    if (!err) {
-      router.push(redirect);
+    const result = await googleLogin(response.credential);
+    if (!result.error) {
+      router.push(result.role === "admin" ? "/admin/dashboard" : redirect);
     } else {
-      setError(err);
+      setError(result.error);
     }
   }, [googleLogin, router, redirect]);
 
@@ -120,6 +120,9 @@ function LoginForm() {
         <p className="text-center text-white/30 text-[12px] mt-5">
           Don&apos;t have an account?{" "}
           <Link href={`/register${redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`} className="text-[#E11D48] hover:text-[#F43F5E] transition-colors">Create one</Link>
+        </p>
+        <p className="text-center mt-4">
+          <Link href="/admin/login" className="text-white/20 hover:text-white/40 text-[11px] transition-colors">Admin sign in →</Link>
         </p>
       </div>
     </main>

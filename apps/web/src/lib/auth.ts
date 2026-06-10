@@ -37,17 +37,17 @@ export async function login(email: string, password: string): Promise<AuthResult
   });
 }
 
+export async function adminLogin(email: string, password: string): Promise<AuthResult> {
+  return apiFetch("/api/v1/auth/admin/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
 export async function register(name: string, email: string, password: string): Promise<AuthResult> {
   return apiFetch("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify({ name, email, password }),
-  });
-}
-
-export async function verifyEmail(token: string): Promise<AuthResult> {
-  return apiFetch("/api/v1/auth/verify-email", {
-    method: "POST",
-    body: JSON.stringify({ token }),
   });
 }
 
@@ -62,7 +62,9 @@ export type DecodedToken = {
   id: string;
   name?: string;
   email?: string;
+  role?: string;
   picture?: string;
+  emailVerified?: boolean;
   jti?: string;
 };
 

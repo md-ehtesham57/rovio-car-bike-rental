@@ -10,9 +10,6 @@ const worker = new Worker(
 
     try {
       switch (type) {
-        case "verification":
-          await mailService.sendVerificationEmail(email, name, token);
-          break;
         case "password-reset":
           await mailService.sendPasswordResetEmail(email, token);
           break;

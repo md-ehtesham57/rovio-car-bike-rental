@@ -1,15 +1,30 @@
 import { Router } from "express";
-import { authController } from "./auth.controller";
-import { validate, registerSchema, loginSchema, verifyEmailSchema, googleAuthSchema, forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
+import * as ctrl from "./auth.controller";
+import { authenticate } from "../../middleware/auth.middleware";
+import { validate } from "../../middleware/validate.middleware";
+import { authLimiter, passwordResetLimiter } from "../../middleware/ratelimit.middleware";
+import {
+  registerSchema,
+  loginSchema,
+  googleSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "../../lib/schemas";
 
 const router = Router();
 
-router.post("/register", validate(registerSchema), authController.register);
-router.post("/login", validate(loginSchema), authController.login);
-router.post("/google", validate(googleAuthSchema), authController.google);
-router.post("/logout", authController.logout);
-router.post("/verify-email", validate(verifyEmailSchema), authController.verifyEmail);
-router.post("/forgot-password", validate(forgotPasswordSchema), authController.forgotPassword);
-router.post("/reset-password", validate(resetPasswordSchema), authController.resetPassword);
+// ─── Public ───────────────────────────────────────────────────────────────────
+router.post("/register",        authLimiter,         validate(registerSchema),        ctrl.register);
+router.post("/login",           authLimiter,         validate(loginSchema),            ctrl.login);
+router.post("/google",          authLimiter,         validate(googleSchema),           ctrl.googleLogin);
+router.post("/logout",                                                                  ctrl.logout);
+router.post("/forgot-password", passwordResetLimiter, validate(forgotPasswordSchema),  ctrl.forgotPassword);
+router.post("/reset-password",  passwordResetLimiter, validate(resetPasswordSchema),   ctrl.resetPassword);
+
+// ─── Admin auth (separate endpoint, stricter limiter) ─────────────────────────
+router.post("/admin/login",     authLimiter,         validate(loginSchema),            ctrl.adminLogin);
+
+// ─── Protected ────────────────────────────────────────────────────────────────
+router.get("/me", authenticate, ctrl.me);
 
 export default router;

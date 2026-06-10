@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -9,6 +10,7 @@ type Category = "All" | "Cars" | "Bikes" | "Luxury" | "SUV";
 
 interface Vehicle {
   id: number;
+  _id?: string;
   name: string;
   brand: string;
   type: string;
@@ -22,7 +24,7 @@ interface Vehicle {
   categories: Category[];
 }
 
-const VEHICLES: Vehicle[] = [
+const MOCK_VEHICLES: Vehicle[] = [
   { id: 1,  name: "Roma",          brand: "Ferrari",       type: "Sports Car",    emoji: "🏎️", price: 12000, tag: "Hot",         fuel: "Petrol", seats: 2, transmission: "Auto",   categories: ["All","Cars","Luxury"] },
   { id: 2,  name: "5 Series",      brand: "BMW",           type: "Sedan",         emoji: "🚗", price: 8000,  tag: "Luxury",      fuel: "Diesel", seats: 5, transmission: "Auto",   categories: ["All","Cars","Luxury"] },
   { id: 3,  name: "E-Class",       brand: "Mercedes-Benz", type: "Luxury Sedan",  emoji: "🚗", price: 9500,  tag: "Luxury",      fuel: "Diesel", seats: 5, transmission: "Auto",   categories: ["All","Cars","Luxury"] },
@@ -62,6 +64,7 @@ const WHY = [
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 32);
@@ -70,6 +73,9 @@ function Navbar() {
   }, []);
 
   const links = [["Home", "/"], ["Vehicles", "/vehicles"], ["About", "/about"], ["Contact", "/contact"]] as const;
+
+  const dashboardHref = user?.role === "admin" ? "/admin/dashboard" :
+    user?.role === "seller" ? "/seller/dashboard" : "/profile";
 
   return (
     <header
@@ -99,20 +105,45 @@ function Navbar() {
           ))}
         </nav>
 
-        {/* Desktop CTA */}
+        {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/vehicles" className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150">
-            Browse fleet
-          </Link>
-          <Link
-            href="/vehicles"
-            className="flex items-center gap-1.5 bg-[#E11D48] hover:bg-[#F43F5E] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors duration-150"
-          >
-            Book now
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M2 5.5h7M6 2.5l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
+          {user ? (
+            <>
+              <Link href="/login?redirect=/seller/dashboard" className="text-[13px] text-white/40 hover:text-white/70 transition-all duration-150">
+                List a vehicle
+              </Link>
+              <Link
+                href={dashboardHref}
+                className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={logout}
+                className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-white/70 hover:text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors duration-150"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login?redirect=/seller/dashboard" className="text-[13px] text-white/40 hover:text-white/70 transition-all duration-150">
+                List a vehicle
+              </Link>
+              <Link href="/login" className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150">
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="flex items-center gap-1.5 bg-[#E11D48] hover:bg-[#F43F5E] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors duration-150"
+              >
+                Get started
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                  <path d="M2 5.5h7M6 2.5l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -140,13 +171,40 @@ function Navbar() {
               {label}
             </Link>
           ))}
-          <Link
-            href="/vehicles"
-            onClick={() => setOpen(false)}
-            className="mt-3 flex justify-center bg-[#E11D48] text-white text-[13px] font-medium py-2.5 rounded-md"
-          >
-            Book now
-          </Link>
+          {user ? (
+            <>
+              <Link
+                href={dashboardHref}
+                onClick={() => setOpen(false)}
+                className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { logout(); setOpen(false); }}
+                className="mt-3 flex justify-center bg-white/[0.06] text-white/70 hover:text-white text-[13px] font-medium py-2.5 rounded-md w-full"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setOpen(false)}
+                className="mt-3 flex justify-center bg-[#E11D48] text-white text-[13px] font-medium py-2.5 rounded-md"
+              >
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -344,12 +402,48 @@ function Ticker() {
   );
 }
 
+function mapApiVehicle(v: any): Vehicle {
+  return {
+    id: v._id ? parseInt(v._id.toString().slice(-6), 16) : 0,
+    _id: v._id?.toString(),
+    name: v.name,
+    brand: v.brand,
+    type: v.type,
+    emoji: v.emoji,
+    price: v.pricePerDay,
+    tag: v.tag,
+    fuel: v.fuel,
+    seats: v.seats,
+    cc: v.cc,
+    transmission: v.transmission,
+    categories: ["All", ...(v.categories || [])] as Category[],
+  };
+}
+
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 
 function Vehicles() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [active, setActive] = useState<Category>("All");
+
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const res = await fetch("/api/vehicles");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data?.items)) {
+          const api = json.data.items.map(mapApiVehicle);
+          setVehicles((prev) => [...api, ...prev]);
+        }
+      } catch {
+        /* fallback to mock */
+      }
+    };
+    fetchVehicles();
+  }, []);
+
   const categories: Category[] = ["All", "Cars", "Bikes", "Luxury", "SUV"];
-  const filtered = VEHICLES.filter((v) => v.categories.includes(active));
+  const filtered = vehicles.filter((v) => v.categories.includes(active));
 
   return (
     <section className="bg-[#0C0C0E] py-14 md:py-24 px-5 md:px-10">
@@ -666,6 +760,9 @@ function Footer() {
               {l}
             </Link>
           ))}
+          <Link href="/admin/login" className="text-white/15 hover:text-white/35 text-[12px] transition-colors duration-150">
+            Admin
+          </Link>
         </div>
 
         <p className="text-white/15 text-[12px]">© {new Date().getFullYear()} Rovio Rentals</p>

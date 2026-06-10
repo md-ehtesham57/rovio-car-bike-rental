@@ -32,15 +32,6 @@ export const authLimiter = rateLimit({
   message: makeMessage("Too many auth attempts. Try again in 15 minutes."),
 });
 
-/** OTP resend — prevent email bombing */
-export const otpLimiter = rateLimit({
-  windowMs: config.rateLimits.otp.windowMs,
-  max:      config.rateLimits.otp.max,
-  standardHeaders: true,
-  legacyHeaders:   false,
-  message: makeMessage("Too many OTP requests. Try again in 1 hour."),
-});
-
 /** Admin routes */
 export const adminLimiter = rateLimit({
   windowMs: config.rateLimits.admin.windowMs,

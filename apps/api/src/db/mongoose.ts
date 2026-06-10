@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { env } from "../config";
 
+// Fail DB operations immediately instead of buffering for 10s
+mongoose.set("bufferCommands", false);
+
 let connected = false;
 
 export function isConnected() {

@@ -2,49 +2,60 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import morgan from "morgan";
-import rateLimit from "express-rate-limit";
-import authRoutes from "./modules/auth/auth.routes";
-import { errorHandler } from "./middleware/error.middleware";
-import { apiKeyGuard } from "./middleware/auth.middleware";
 import { config } from "./config";
+import authRoutes    from "./modules/auth/auth.routes";
+import vehiclesRoutes from "./modules/vehicles/vehicles.routes";
+import sellerRoutes  from "./modules/seller/seller.routes";
+import adminRoutes   from "./modules/admin/admin.routes";
+import { errorHandler, notFound } from "./middleware/error.middleware";
+import { apiKeyGuard } from "./middleware/auth.middleware";
+import { globalLimiter } from "./middleware/ratelimit.middleware";
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
-app.use(cookieParser());
-app.use(morgan(config.isDev() ? "dev" : "combined"));
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: config.isProd() ? undefined : false,
+}));
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+app.use(cors({
+  origin:      config.appUrl,
+  credentials: true,
+  methods:     ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+}));
+
+// ─── Body + cookies ───────────────────────────────────────────────────────────
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
 
-app.use(
-  rateLimit({
-    windowMs: config.rateLimits.global.windowMs,
-    max: config.rateLimits.global.max,
-    message: { success: false, message: "Too many requests, please try again later." },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.path === "/health",
-  })
-);
+// ─── Global rate limiter ──────────────────────────────────────────────────────
+app.use(globalLimiter);
 
+// ─── Health check (public, no API key) ───────────────────────────────────────
 app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "UP" });
+  res.json({
+    status:    "ok",
+    service:   "rovio-api",
+    env:       config.env,
+    timestamp: new Date().toISOString(),
+  });
 });
 
-app.use(apiKeyGuard);
+// ─── All /api/v1 routes are protected by the internal API key ─────────────────
+// The Next.js server sends this key; browsers cannot access these routes directly
+app.use("/api/v1", apiKeyGuard);
 
-const authLimiter = rateLimit({
-  windowMs: config.rateLimits.auth.windowMs,
-  max: config.rateLimits.auth.max,
-  message: { success: false, message: "Too many requests, please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+app.use("/api/v1/auth",     authRoutes);
+app.use("/api/v1/vehicles", vehiclesRoutes);
+app.use("/api/v1/seller",   sellerRoutes);
+app.use("/api/v1/admin",    adminRoutes);
 
-app.use("/api/v1/auth", authLimiter, authRoutes);
-
+// ─── 404 + global error handler ───────────────────────────────────────────────
+app.use(notFound);
 app.use(errorHandler);
 
 export default app;

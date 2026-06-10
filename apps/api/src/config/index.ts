@@ -33,6 +33,7 @@ export const config = {
   resendApiKey: optional("RESEND_API_KEY", ""),
   mailFrom: optional("MAIL_FROM", "onboarding@resend.dev"),
 
+  appUrl: optional("APP_URL", "http://localhost:3000"),
   corsOrigin: optional("CORS_ORIGIN", "http://localhost:3000"),
   frontendUrl: optional("FRONTEND_URL", "http://localhost:3000"),
 
@@ -42,10 +43,6 @@ export const config = {
     auth: {
       windowMs: 15 * 60 * 1000,
       max: parseInt(optional("RATE_AUTH_MAX", "20"), 10),
-    },
-    otp: {
-      windowMs: 60 * 60 * 1000,
-      max: parseInt(optional("RATE_OTP_MAX", "5"), 10),
     },
     global: {
       windowMs: 15 * 60 * 1000,

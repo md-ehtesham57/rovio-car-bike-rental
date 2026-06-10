@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, useRef, Suspense, useCallback } from "react";
+import { useState, type FormEvent, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 
 function RegisterForm() {
-  const { register, login, googleLogin } = useAuth();
+  const { register, googleLogin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -17,23 +17,16 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [otpHint, setOtpHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [otpBusy, setOtpBusy] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleGoogleSuccess = useCallback(async (response: CredentialResponse) => {
     if (!response.credential) return;
     setError(null);
-    const err = await googleLogin(response.credential);
-    if (!err) {
+    const result = await googleLogin(response.credential);
+    if (!result.error) {
       router.push(redirect);
     } else {
-      setError(err);
+      setError(result.error);
     }
   }, [googleLogin, router, redirect]);
 
@@ -45,122 +38,10 @@ function RegisterForm() {
     if (result.error) {
       setError(result.error);
     } else {
-      setSuccess(true);
-      if (result.data?.otp) setOtpHint(result.data.otp as string);
+      router.push(redirect);
     }
     setBusy(false);
   };
-
-  const handleOtpChange = (index: number, value: string) => {
-    if (value && !/^\d$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpSubmit = async () => {
-    const code = otp.join("");
-    if (code.length !== 6) {
-      setOtpError("Enter the full 6-digit code");
-      return;
-    }
-    setOtpError(null);
-    setOtpBusy(true);
-    const res = await fetch("/api/auth/verify-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      setOtpError(data.message || "Invalid code");
-      setOtpBusy(false);
-      return;
-    }
-    setOtpVerified(true);
-    await login(email, password);
-    router.push(redirect);
-  };
-
-  if (otpVerified) {
-    return (
-      <main className="min-h-screen bg-[#0C0C0E] flex items-center justify-center px-5">
-        <div className="w-full max-w-md text-center">
-          <div className="w-12 h-12 rounded-full bg-[#E11D48]/15 flex items-center justify-center mx-auto mb-4">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="#E11D48">
-              <path d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"/>
-            </svg>
-          </div>
-          <h1 className="font-syne font-semibold text-white text-[1.4rem] mb-2">Email verified!</h1>
-          <p className="text-white/40 text-[13px] leading-relaxed">
-            Redirecting you to <span className="text-white/60">{redirect}</span>...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (success) {
-    return (
-      <main className="min-h-screen bg-[#0C0C0E] flex items-center justify-center px-5">
-        <div className="w-full max-w-md text-center">
-          <div className="w-12 h-12 rounded-full bg-[#E11D48]/15 flex items-center justify-center mx-auto mb-4">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="#E11D48">
-              <path d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"/>
-            </svg>
-          </div>
-          <h1 className="font-syne font-semibold text-white text-[1.4rem] mb-2">Check your email</h1>
-          <p className="text-white/40 text-[13px] leading-relaxed">
-            We&apos;ve sent a 6-digit code to <span className="text-white/60">{email}</span>.<br />
-            Enter it below to verify your account.
-          </p>
-          {otpHint && (
-            <div className="mt-3 px-4 py-2.5 bg-[#E11D48]/[0.08] border border-[#E11D48]/[0.15] rounded-lg">
-              <p className="text-white/40 text-[10px] tracking-[0.06em] uppercase">Dev hint</p>
-              <p className="text-[#E11D48] text-[24px] font-mono font-bold tracking-[0.15em]">{otpHint}</p>
-            </div>
-          )}
-
-          <div className="mt-6">
-            <div className="flex gap-2 justify-center">
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-11 h-12 bg-[#141416] border border-white/[0.1] rounded-lg text-white text-center text-lg font-medium outline-none focus:border-[#E11D48]/50 transition-colors"
-                />
-              ))}
-            </div>
-            {otpError && (
-              <p className="text-[#E11D48] text-[12px] mt-3">{otpError}</p>
-            )}
-            <button
-              onClick={handleOtpSubmit}
-              disabled={otpBusy}
-              className="mt-4 w-full bg-[#E11D48] hover:bg-[#F43F5E] disabled:opacity-50 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors"
-            >
-              {otpBusy ? "Verifying..." : "Verify email"}
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-[#0C0C0E] flex items-center justify-center px-5">

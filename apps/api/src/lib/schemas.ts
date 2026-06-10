@@ -26,11 +26,6 @@ export const objectIdSchema = z
   .string()
   .regex(/^[a-f\d]{24}$/i, "Invalid ID");
 
-export const otpSchema = z
-  .string()
-  .length(6, "OTP must be exactly 6 digits")
-  .regex(/^\d{6}$/, "OTP must contain only digits");
-
 export const paginationSchema = z.object({
   page:  z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -51,8 +46,8 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required").max(128),
 });
 
-export const verifyEmailSchema = z.object({
-  token: otpSchema,
+export const googleSchema = z.object({
+  credential: z.string().min(1, "Google credential is required"),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -71,21 +66,6 @@ export const changePasswordSchema = z.object({
   (d) => d.currentPassword !== d.newPassword,
   { message: "New password must differ from current", path: ["newPassword"] },
 );
-
-export const googleAuthSchema = z.object({
-  credential: z.string().min(1, "Google credential is required"),
-});
-
-export function validate(schema: z.ZodTypeAny) {
-  return (req: any, _res: any, next: any) => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      return next(result.error);
-    }
-    req.body = result.data;
-    next();
-  };
-}
 
 // ─── Vehicle schemas ──────────────────────────────────────────────────────────
 
@@ -146,7 +126,7 @@ export const bookingQuerySchema = z.object({
 // ─── Admin user schemas ───────────────────────────────────────────────────────
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum(["user", "admin"]),
+  role: z.enum(["user", "admin", "seller"]),
 });
 
 export const adminUserQuerySchema = z.object({
