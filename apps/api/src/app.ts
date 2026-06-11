@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path";
 import { config } from "./config";
 import authRoutes    from "./modules/auth/auth.routes";
 import vehiclesRoutes from "./modules/vehicles/vehicles.routes";
@@ -34,6 +35,9 @@ app.use(cookieParser());
 
 // ─── Global rate limiter ──────────────────────────────────────────────────────
 app.use(globalLimiter);
+
+// ─── Static files (uploaded images) ────────────────────────────────────────────
+app.use("/uploads", express.static(path.resolve("uploads")));
 
 // ─── Health check (public, no API key) ───────────────────────────────────────
 app.get("/health", (_req, res) => {

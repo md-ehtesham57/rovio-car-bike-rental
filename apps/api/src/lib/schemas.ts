@@ -82,6 +82,7 @@ export const createVehicleSchema = z.object({
   transmission: z.enum(["Auto", "Manual"]),
   categories:   z.array(z.enum(["Cars", "Bikes", "Luxury", "SUV"])).min(1),
   description:  z.string().trim().min(10).max(500),
+  images:       z.array(z.string()).max(10).default([]),
   available:    z.boolean().default(true),
 });
 

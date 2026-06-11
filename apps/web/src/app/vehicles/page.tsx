@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
 
 type Category = "All" | "Cars" | "Bikes" | "Luxury" | "SUV";
 type SortOption = "recommended" | "price-asc" | "price-desc";
@@ -25,7 +23,10 @@ interface Vehicle {
   transmission: string;
   categories: Category[];
   description: string;
+  images?: string[];
 }
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 const MOCK_VEHICLES: Vehicle[] = [
   { id: 1,  name: "Roma",        brand: "Ferrari",       type: "Sports Car",   emoji: "🏎️", price: 12000, tag: "Hot",         fuel: "Petrol", seats: 2, transmission: "Auto",   categories: ["All","Cars","Luxury"], description: "560hp Italian masterpiece. Turn heads on every road." },
@@ -59,10 +60,16 @@ function mapApiVehicle(v: any): Vehicle {
     transmission: v.transmission,
     categories: ["All", ...(v.categories || [])] as Category[],
     description: v.description,
+    images: v.images,
   };
 }
 
-// ─── Navbar ───────────────────────────────────────────────────────────────────
+const GRADIENTS: Record<string, string> = {
+  Luxury: "from-purple-900/60 via-purple-800/20 to-transparent",
+  Cars: "from-rose-900/60 via-rose-800/20 to-transparent",
+  Bikes: "from-orange-900/60 via-orange-800/20 to-transparent",
+  SUV: "from-emerald-900/60 via-emerald-800/20 to-transparent",
+};
 
 function Navbar() {
   const { user } = useAuth();
@@ -155,11 +162,11 @@ function Navbar() {
   );
 }
 
-// ─── Vehicle Card ─────────────────────────────────────────────────────────────
-
 function VehicleCard({ v }: { v: Vehicle }) {
   const { user } = useAuth();
   const router = useRouter();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const handleBook = (e: React.MouseEvent) => {
     if (!user) {
@@ -168,53 +175,93 @@ function VehicleCard({ v }: { v: Vehicle }) {
     }
   };
 
+  const category = v.categories.find((c) => c !== "All") || "Cars";
+
   return (
-    <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
-      <div className="h-[120px] flex flex-col justify-between p-3 relative">
-        <div className="absolute inset-0 bg-[#0C0C0E]" />
-        <div className="absolute inset-0 opacity-40" style={{
-          background: `radial-gradient(ellipse at 70% 40%, ${
-            v.categories.includes("Luxury") ? "rgba(120,80,200,0.15)" :
-            v.categories.includes("Bikes") ? "rgba(234,88,12,0.12)" :
-            v.categories.includes("SUV") ? "rgba(21,128,61,0.1)" :
-            "rgba(225,29,72,0.08)"
-          } 0%, transparent 70%)`
-        }} />
-        {v.tag ? (
-          <span className="relative self-end text-[9px] font-semibold text-white/70 bg-white/[0.08] px-2 py-0.5 rounded tracking-[0.06em]">{v.tag}</span>
-        ) : <span />}
-        <div className="relative flex items-center justify-center text-[44px] leading-none select-none group-hover:scale-105 transition-transform duration-300">
-          {v.emoji}
+    <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-1 transition-all duration-300 flex flex-col">
+      {/* Image / Emoji area */}
+      <div className="relative h-[180px] overflow-hidden bg-[#0C0C0E]">
+        {v.images && v.images.length > 0 ? (
+          <>
+            <img
+              ref={imgRef}
+              src={`${API_URL}${v.images[0]}`}
+              alt={`${v.brand} ${v.name}`}
+              className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => setLoaded(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0C0C0E] via-transparent to-transparent opacity-60" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br opacity-30"
+              style={{
+                background: `radial-gradient(ellipse at 50% 30%, ${
+                  category === "Luxury" ? "rgba(120,80,200,0.25)" :
+                  category === "Bikes" ? "rgba(234,88,12,0.2)" :
+                  category === "SUV" ? "rgba(21,128,61,0.2)" :
+                  "rgba(225,29,72,0.15)"
+                } 0%, transparent 70%)`
+              }} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[56px] select-none group-hover:scale-110 transition-transform duration-300">{v.emoji}</span>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0C0C0E]/80 via-transparent to-transparent" />
+          </>
+        )}
+
+        {/* Tag badge */}
+        {v.tag && (
+          <span className="absolute top-2.5 right-2.5 text-[9px] font-semibold text-white bg-white/10 backdrop-blur-md px-2 py-0.5 rounded tracking-[0.06em] z-10">
+            {v.tag}
+          </span>
+        )}
+
+        {/* Price */}
+        <div className="absolute bottom-2.5 left-3 z-10">
+          <div className="font-syne font-bold text-white text-[18px] leading-tight drop-shadow-lg">
+            ₹{v.price.toLocaleString("en-IN")}
+          </div>
+          <div className="text-white/50 text-[10px]">/day</div>
         </div>
       </div>
 
-      <div className="p-3.5 border-t border-white/[0.06] flex flex-col flex-1">
-        <p className="text-white/30 text-[10px] tracking-[0.06em] mb-0.5">{v.type}</p>
-        <div className="flex items-start justify-between gap-1 mb-2">
-          <h3 className="font-syne font-semibold text-white text-[14px] leading-tight">
-            {v.brand} <span className="font-normal text-white/50">{v.name}</span>
-          </h3>
-          <div className="text-right shrink-0">
-            <div className="font-syne font-semibold text-white text-[15px]">₹{v.price.toLocaleString("en-IN")}</div>
-            <div className="text-white/25 text-[9px]">/day</div>
-          </div>
+      {/* Info */}
+      <div className="p-4 flex flex-col flex-1">
+        <p className="text-white/30 text-[10px] tracking-[0.06em] mb-0.5 uppercase">{v.type}</p>
+        <h3 className="font-syne font-semibold text-white text-[15px] leading-tight mb-1">
+          {v.brand} <span className="font-normal text-white/45">{v.name}</span>
+        </h3>
+
+        <p className="text-white/25 text-[12px] leading-[1.6] mb-3 line-clamp-2">{v.description}</p>
+
+        {/* Spec chips */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          <span className="flex items-center gap-1 text-[10px] text-white/40 bg-white/[0.05] px-2.5 py-1 rounded-[5px]">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 3v2l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            {v.transmission}
+          </span>
+          <span className="flex items-center gap-1 text-[10px] text-white/40 bg-white/[0.05] px-2.5 py-1 rounded-[5px]">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 5h8M5 1v8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            {v.fuel}
+          </span>
+          <span className="flex items-center gap-1 text-[10px] text-white/40 bg-white/[0.05] px-2.5 py-1 rounded-[5px]">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2"/></svg>
+            {v.seats} seats
+          </span>
+          {v.cc && (
+            <span className="text-[10px] text-white/40 bg-white/[0.05] px-2.5 py-1 rounded-[5px]">{v.cc}</span>
+          )}
         </div>
 
-        <p className="text-white/30 text-[11px] leading-[1.6] mb-3">{v.description}</p>
-
-        <div className="flex flex-wrap gap-1.5 mb-3.5">
-          {[v.fuel, `${v.seats} seats`, v.cc ?? v.transmission].map((s) => (
-            <span key={s} className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">{s}</span>
-          ))}
-        </div>
-
-        <div className="flex gap-1.5 mt-auto">
+        {/* Actions */}
+        <div className="flex gap-2 mt-auto">
           <Link href={`/vehicles/${v.id}`}
-            className="flex-1 text-center text-[11px] text-white/35 hover:text-white/65 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-md transition-all duration-150">
+            className="flex-1 text-center text-[12px] text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-lg transition-all duration-150">
             Details
           </Link>
           <Link href={`/vehicles/${v.id}`} onClick={handleBook}
-            className="flex-1 text-center text-[11px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-md transition-colors duration-150">
+            className="flex-1 text-center text-[12px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-lg transition-colors duration-150">
             Book now
           </Link>
         </div>
@@ -222,8 +269,6 @@ function VehicleCard({ v }: { v: Vehicle }) {
     </div>
   );
 }
-
-// ─── Footer ───────────────────────────────────────────────────────────────────
 
 function Footer() {
   return (
@@ -246,13 +291,12 @@ function Footer() {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [active, setActive] = useState<Category>("All");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [search, setSearch] = useState("");
+  const [count, setCount] = useState(MOCK_VEHICLES.length);
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -262,9 +306,10 @@ export default function VehiclesPage() {
         if (json.success && Array.isArray(json.data?.items)) {
           const api = json.data.items.map(mapApiVehicle);
           setVehicles((prev) => [...api, ...prev]);
+          setCount(json.data.total || api.length);
         }
       } catch {
-        // fallback to mock
+        /* fallback to mock */
       }
     };
     fetchVehicles();
@@ -283,30 +328,35 @@ export default function VehiclesPage() {
     .sort((a, b) => {
       if (sort === "price-asc") return a.price - b.price;
       if (sort === "price-desc") return b.price - a.price;
-      return a.id - b.id;
+      return b.id - a.id;
     });
 
   return (
     <main className="bg-[#0C0C0E] text-white min-h-screen">
       <Navbar />
 
-      {/* Page header */}
-      <section className="pt-[60px] bg-[#0C0C0E] border-b border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-5 md:px-10 py-10 md:py-14">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
+      {/* Hero header */}
+      <section className="relative pt-[60px] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#E11D48]/5 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-20 right-[-100px] w-[400px] h-[400px] rounded-full bg-[#E11D48]/3 blur-[120px] pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-5 md:px-10 py-14 md:py-20">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <p className="text-[#E11D48] text-[11px] font-medium tracking-[0.1em] uppercase mb-3">Our Fleet</p>
-              <h1 className="font-syne font-semibold text-[2rem] md:text-[3rem] text-white tracking-[-0.03em] leading-[1.05]">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+                <p className="text-[#E11D48] text-[11px] font-medium tracking-[0.1em] uppercase">Our Fleet</p>
+              </div>
+              <h1 className="font-syne font-semibold text-[2.5rem] md:text-[4rem] text-white tracking-[-0.03em] leading-[1.05]">
                 Browse vehicles
               </h1>
-              <p className="text-white/35 text-[13px] mt-2.5 leading-[1.6]">
-                {MOCK_VEHICLES.length} vehicles available · Hand-picked, insured & road-ready
+              <p className="text-white/35 text-[14px] mt-3 leading-[1.6]">
+                {count} vehicle{count !== 1 ? "s" : ""} available · Every ride insured & road-ready
               </p>
             </div>
 
             {/* Search */}
-            <div className="relative w-full md:w-[260px]">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <div className="relative w-full md:w-[280px] shrink-0">
+              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M9.5 9.5l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
@@ -315,34 +365,39 @@ export default function VehiclesPage() {
                 placeholder="Search brand or model..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#141416] border border-white/[0.08] rounded-md pl-9 pr-4 py-2.5 text-[13px] text-white placeholder-white/25 focus:outline-none focus:border-white/[0.2] transition-colors duration-150"
+                className="w-full bg-[#141416] border border-white/[0.08] rounded-lg pl-10 pr-4 py-3 text-[13px] text-white placeholder-white/25 focus:outline-none focus:border-white/[0.2] focus:bg-[#1a1a1d] transition-all duration-150"
               />
             </div>
           </div>
+
+          {/* Subtitle */}
+          <p className="text-white/20 text-[12px] mt-6 leading-[1.7] max-w-[500px]">
+            Hand-picked, professionally serviced, and fully insured. Every vehicle in our fleet is ready to hit the road.
+          </p>
         </div>
       </section>
 
-      {/* Filters + Sort */}
+      {/* Sticky filters bar */}
       <div className="sticky top-[60px] z-40 bg-[#0C0C0E]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-5 md:px-10 flex items-center justify-between gap-4">
-          {/* Category tabs */}
           <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {categories.map((cat) => (
               <button key={cat} onClick={() => setActive(cat)}
-                className={`px-3.5 md:px-5 py-3.5 text-[12px] font-medium tracking-[0.04em] border-b-[1.5px] -mb-px whitespace-nowrap transition-all duration-150 ${
-                  active === cat ? "text-white border-[#E11D48]" : "text-white/30 border-transparent hover:text-white/55"
+                className={`px-4 md:px-6 py-3.5 text-[12px] font-medium tracking-[0.04em] border-b-[1.5px] -mb-px whitespace-nowrap transition-all duration-150 ${
+                  active === cat
+                    ? "text-white border-[#E11D48]"
+                    : "text-white/30 border-transparent hover:text-white/55"
                 }`}>
                 {cat}
               </button>
             ))}
           </div>
 
-          {/* Sort */}
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortOption)}
-            className="shrink-0 bg-[#141416] border border-white/[0.08] rounded-md px-3 py-1.5 text-[12px] text-white/50 focus:outline-none focus:border-white/20 transition-colors cursor-pointer appearance-none pr-7"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='rgba(255,255,255,0.3)' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+            className="shrink-0 bg-[#141416] border border-white/[0.08] rounded-lg px-3 py-2 text-[12px] text-white/50 focus:outline-none focus:border-white/20 transition-colors cursor-pointer appearance-none pr-8"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='rgba(255,255,255,0.3)' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
           >
             <option value="recommended">Recommended</option>
             <option value="price-asc">Price: Low to high</option>
@@ -356,14 +411,16 @@ export default function VehiclesPage() {
         <div className="max-w-6xl mx-auto">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="text-5xl mb-4">🔍</div>
+              <div className="text-5xl mb-4 opacity-50">🔍</div>
               <p className="text-white/50 text-[14px]">No vehicles found for &ldquo;{search}&rdquo;</p>
               <button onClick={() => setSearch("")} className="mt-4 text-[#E11D48] text-[13px] hover:underline">Clear search</button>
             </div>
           ) : (
             <>
-              <p className="text-white/25 text-[12px] mb-6">{filtered.length} vehicle{filtered.length !== 1 ? "s" : ""} found</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-white/25 text-[12px]">{filtered.length} vehicle{filtered.length !== 1 ? "s" : ""} found</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((v) => <VehicleCard key={v.id} v={v} />)}
               </div>
             </>

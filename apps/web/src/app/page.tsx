@@ -22,6 +22,7 @@ interface Vehicle {
   cc?: string;
   transmission: string;
   categories: Category[];
+  images?: string[];
 }
 
 const MOCK_VEHICLES: Vehicle[] = [
@@ -402,6 +403,8 @@ function Ticker() {
   );
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 function mapApiVehicle(v: any): Vehicle {
   return {
     id: v._id ? parseInt(v._id.toString().slice(-6), 16) : 0,
@@ -417,6 +420,7 @@ function mapApiVehicle(v: any): Vehicle {
     cc: v.cc,
     transmission: v.transmission,
     categories: ["All", ...(v.categories || [])] as Category[],
+    images: v.images,
   };
 }
 
@@ -453,6 +457,7 @@ function Vehicles() {
           <div>
             <p className="text-[#E11D48] text-[11px] font-medium tracking-[0.1em] uppercase mb-3">Fleet</p>
             <h2 className="font-syne font-semibold text-[1.9rem] md:text-[3rem] text-white tracking-[-0.03em] leading-[1.05]">
+              Choose your ride
             </h2>
           </div>
           <p className="text-white/30 text-[13px] leading-[1.7] max-w-[260px] md:text-right">
@@ -502,71 +507,68 @@ function Vehicles() {
 }
 
 function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
+  const category = v.categories.find((c) => c !== "All") || "Cars";
+
   return (
-    <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-0.5 transition-all duration-200">
-      {/* Top image area */}
-      <div className="h-[110px] flex flex-col justify-between p-3 relative">
-        {/* Subtle tinted bg per category */}
-        <div className="absolute inset-0 bg-[#0C0C0E]" />
-        <div className="absolute inset-0 opacity-40" style={{
-          background: `radial-gradient(ellipse at 70% 40%, ${
-            v.categories.includes("Luxury") ? "rgba(120,80,200,0.15)" :
-            v.categories.includes("Bikes") ? "rgba(234,88,12,0.12)" :
-            v.categories.includes("SUV") ? "rgba(21,128,61,0.1)" :
-            "rgba(225,29,72,0.08)"
-          } 0%, transparent 70%)`
-        }} />
-
-        {/* Tag */}
-        {v.tag && (
-          <span className="relative self-end text-[9px] font-semibold text-white/70 bg-white/[0.08] px-2 py-0.5 rounded tracking-[0.06em]">
-            {v.tag}
-          </span>
+    <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+      <div className="relative h-[140px] overflow-hidden bg-[#0C0C0E]">
+        {v.images && v.images.length > 0 ? (
+          <>
+            <img
+              src={`${API_URL}${v.images[0]}`}
+              alt={`${v.brand} ${v.name}`}
+              className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0C0C0E] via-transparent to-transparent opacity-60" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br opacity-30"
+              style={{
+                background: `radial-gradient(ellipse at 50% 30%, ${
+                  category === "Luxury" ? "rgba(120,80,200,0.25)" :
+                  category === "Bikes" ? "rgba(234,88,12,0.2)" :
+                  category === "SUV" ? "rgba(21,128,61,0.2)" :
+                  "rgba(225,29,72,0.15)"
+                } 0%, transparent 70%)`
+              }} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[46px] select-none group-hover:scale-110 transition-transform duration-300">{v.emoji}</span>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0C0C0E]/80 via-transparent to-transparent" />
+          </>
         )}
-        {!v.tag && <span />}
 
-        {/* Emoji */}
-        <div className="relative flex items-center justify-center text-[42px] leading-none select-none group-hover:scale-105 transition-transform duration-300">
-          {v.emoji}
+        {v.tag && (
+          <span className="absolute top-2 right-2 text-[9px] font-semibold text-white bg-white/10 backdrop-blur-md px-2 py-0.5 rounded tracking-[0.06em] z-10">{v.tag}</span>
+        )}
+
+        <div className="absolute bottom-2 left-3 z-10">
+          <div className="font-syne font-bold text-white text-[16px] leading-tight drop-shadow-lg">₹{v.price.toLocaleString("en-IN")}</div>
+          <div className="text-white/50 text-[9px]">/day</div>
         </div>
       </div>
 
-      {/* Body */}
-      <div className="p-3.5 border-t border-white/[0.06]">
-        <p className="text-white/30 text-[10px] tracking-[0.06em] mb-0.5">{v.type}</p>
-        <div className="flex items-start justify-between gap-1 mb-3">
-          <h3 className="font-syne font-semibold text-white text-[14px] leading-tight">
-            {v.brand} <span className="font-normal text-white/50">{v.name}</span>
-          </h3>
-          <div className="text-right shrink-0">
-            <div className="font-syne font-semibold text-white text-[15px]">
-              ₹{v.price.toLocaleString("en-IN")}
-            </div>
-            <div className="text-white/25 text-[9px]">/day</div>
-          </div>
+      <div className="p-3.5 border-t border-white/[0.06] flex flex-col flex-1">
+        <p className="text-white/30 text-[10px] tracking-[0.06em] mb-0.5 uppercase">{v.type}</p>
+        <h3 className="font-syne font-semibold text-white text-[14px] leading-tight mb-2">
+          {v.brand} <span className="font-normal text-white/45">{v.name}</span>
+        </h3>
+
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <span className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">{v.transmission}</span>
+          <span className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">{v.fuel}</span>
+          <span className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">{v.seats} seats</span>
+          {v.cc && <span className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">{v.cc}</span>}
         </div>
 
-        {/* Chips */}
-        <div className="flex flex-wrap gap-1.5 mb-3.5">
-          {[v.fuel, `${v.seats} seats`, v.cc ?? v.transmission].map((s) => (
-            <span key={s} className="text-[10px] text-white/35 bg-white/[0.05] px-2 py-0.5 rounded-[4px]">
-              {s}
-            </span>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-1.5">
-          <Link
-            href={`/vehicles/${v.id}`}
-            className="flex-1 text-center text-[11px] text-white/35 hover:text-white/65 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-md transition-all duration-150"
-          >
+        <div className="flex gap-1.5 mt-auto">
+          <Link href={`/vehicles/${v.id}`}
+            className="flex-1 text-center text-[11px] text-white/35 hover:text-white/65 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-md transition-all duration-150">
             Details
           </Link>
-          <Link
-            href={`/vehicles/${v.id}`}
-            className="flex-1 text-center text-[11px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-md transition-colors duration-150"
-          >
+          <Link href={`/vehicles/${v.id}`}
+            className="flex-1 text-center text-[11px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-md transition-colors duration-150">
             Book now
           </Link>
         </div>

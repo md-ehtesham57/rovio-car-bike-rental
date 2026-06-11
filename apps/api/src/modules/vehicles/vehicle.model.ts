@@ -20,6 +20,7 @@ export interface IVehicle extends Document {
   transmission: TransmissionType;
   categories:   VehicleCategory[];
   description:  string;
+  images:       string[];
   status:       VehicleStatus;
   available:    boolean;
   location?:    string;
@@ -42,6 +43,7 @@ const VehicleSchema = new Schema<IVehicle>(
     transmission: { type: String, enum: ["Auto", "Manual"], required: true },
     categories:   [{ type: String, enum: ["Cars", "Bikes", "Luxury", "SUV"] }],
     description:  { type: String, required: true, trim: true, maxlength: 500 },
+    images:       [{ type: String }],
     status:       { type: String, enum: ["active", "inactive", "pending_review"], default: "pending_review" },
     available:    { type: Boolean, default: true },
     location:     { type: String, trim: true, maxlength: 100 },
