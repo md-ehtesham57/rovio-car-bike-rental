@@ -15,3 +15,10 @@ export async function listPublic(req: Request, res: Response, next: NextFunction
     res.json(ok("Vehicles fetched.", result));
   } catch (err) { next(err); }
 }
+
+export async function getPublic(req: Request, res: Response, next: NextFunction) {
+  try {
+    const vehicle = await vehicleService.getPublicVehicle(String(req.params.id));
+    res.json(ok("Vehicle fetched.", vehicle));
+  } catch (err) { next(err); }
+}

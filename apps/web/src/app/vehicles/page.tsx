@@ -44,7 +44,24 @@ const MOCK_VEHICLES: Vehicle[] = [
   { id: 13, name: "Splendor+",  brand: "Hero",          type: "Commuter",     emoji: "🏍️", price: 500,                       fuel: "Petrol", seats: 2, cc: "100cc", transmission: "Manual", categories: ["All","Bikes"], description: "Lightweight, fuel-efficient daily commuter." },
 ];
 
-function mapApiVehicle(v: any): Vehicle {
+interface ApiVehicle {
+  _id?: string;
+  name: string;
+  brand: string;
+  type: string;
+  emoji: string;
+  pricePerDay: number;
+  tag?: string;
+  fuel: string;
+  seats: number;
+  cc?: string;
+  transmission: string;
+  categories: Category[];
+  description: string;
+  images?: string[];
+}
+
+function mapApiVehicle(v: ApiVehicle): Vehicle {
   return {
     id: v._id ? parseInt(v._id.toString().slice(-6), 16) : 0,
     _id: v._id?.toString(),
@@ -108,12 +125,18 @@ function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           {user ? (
-            <Link href="/profile" className="text-[13px] text-white/70 hover:text-white border border-white/10 hover:border-white/20 px-4 py-2 rounded-md transition-all duration-150 flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#E11D48]/20 flex items-center justify-center">
-                <span className="text-[9px] font-bold text-[#E11D48]">{user.name?.charAt(0).toUpperCase()}</span>
-              </div>
-              Profile
-            </Link>
+            <>
+              <Link href="/bookings"
+                className="text-[13px] text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 px-4 py-2 rounded-md transition-all duration-150">
+                My Bookings
+              </Link>
+              <Link href="/profile" className="text-[13px] text-white/70 hover:text-white border border-white/10 hover:border-white/20 px-4 py-2 rounded-md transition-all duration-150 flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-[#E11D48]/20 flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-[#E11D48]">{user.name?.charAt(0).toUpperCase()}</span>
+                </div>
+                Profile
+              </Link>
+            </>
           ) : (
             <Link href="/login" className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150">
               Sign in
@@ -144,9 +167,14 @@ function Navbar() {
             </Link>
           ))}
           {user ? (
-            <Link href="/profile" onClick={() => setOpen(false)} className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors">
-              Profile ({user.name})
-            </Link>
+            <>
+              <Link href="/bookings" onClick={() => setOpen(false)} className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors">
+                My Bookings
+              </Link>
+              <Link href="/profile" onClick={() => setOpen(false)} className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors">
+                Profile ({user.name})
+              </Link>
+            </>
           ) : (
             <Link href="/login" onClick={() => setOpen(false)} className="py-3 text-[13px] text-white/50 hover:text-white border-b border-white/[0.04] transition-colors">
               Sign in
@@ -171,7 +199,7 @@ function VehicleCard({ v }: { v: Vehicle }) {
   const handleBook = (e: React.MouseEvent) => {
     if (!user) {
       e.preventDefault();
-      router.push(`/login?redirect=/vehicles/${v.id}`);
+      router.push(`/login?redirect=/vehicles/${v._id || v.id}`);
     }
   };
 
@@ -256,11 +284,11 @@ function VehicleCard({ v }: { v: Vehicle }) {
 
         {/* Actions */}
         <div className="flex gap-2 mt-auto">
-          <Link href={`/vehicles/${v.id}`}
+          <Link href={`/vehicles/${v._id || v.id}`}
             className="flex-1 text-center text-[12px] text-white/40 hover:text-white/70 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-lg transition-all duration-150">
             Details
           </Link>
-          <Link href={`/vehicles/${v.id}`} onClick={handleBook}
+          <Link href={`/vehicles/${v._id || v.id}`} onClick={handleBook}
             className="flex-1 text-center text-[12px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-lg transition-colors duration-150">
             Book now
           </Link>

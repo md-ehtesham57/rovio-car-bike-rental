@@ -11,6 +11,7 @@ import adminRoutes   from "./modules/admin/admin.routes";
 import { errorHandler, notFound } from "./middleware/error.middleware";
 import { apiKeyGuard } from "./middleware/auth.middleware";
 import { globalLimiter } from "./middleware/ratelimit.middleware";
+import bookingRoutes from "./modules/bookings/booking.routes";
 
 const app = express();
 
@@ -57,7 +58,7 @@ app.use("/api/v1/auth",     authRoutes);
 app.use("/api/v1/vehicles", vehiclesRoutes);
 app.use("/api/v1/seller",   sellerRoutes);
 app.use("/api/v1/admin",    adminRoutes);
-
+app.use("/api/v1/bookings", bookingRoutes);
 // ─── 404 + global error handler ───────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);

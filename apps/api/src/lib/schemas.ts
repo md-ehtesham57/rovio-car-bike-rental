@@ -106,6 +106,7 @@ export const createBookingSchema = z.object({
     "Start date cannot be in the past",
   ),
   endDate: z.coerce.date(),
+  totalPrice: z.number().positive("Total price must be positive"),
 }).refine(
   (d) => d.endDate > d.startDate,
   { message: "End date must be after start date", path: ["endDate"] },

@@ -115,6 +115,14 @@ export async function deleteVehicle(vehicleId: string, sellerId: string) {
 
 // ─── Seller stats ─────────────────────────────────────────────────────────────
 
+// ─── Public single vehicle ─────────────────────────────────────────────────
+
+export async function getPublicVehicle(vehicleId: string) {
+  const vehicle = await Vehicle.findOne({ _id: vehicleId, status: "active", available: true }).lean();
+  if (!vehicle) throw new AppError("Vehicle not found", 404);
+  return vehicle;
+}
+
 // ─── Public listing (active + available) ────────────────────────────────────
 
 export async function listPublicVehicles(query: {

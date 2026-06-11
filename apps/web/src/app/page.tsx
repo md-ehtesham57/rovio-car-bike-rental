@@ -113,6 +113,10 @@ function Navbar() {
               <Link href="/login?redirect=/seller/dashboard" className="text-[13px] text-white/40 hover:text-white/70 transition-all duration-150">
                 List a vehicle
               </Link>
+              <Link href="/bookings"
+                className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150">
+                My Bookings
+              </Link>
               <Link
                 href={dashboardHref}
                 className="text-[13px] text-white/50 hover:text-white/80 border border-white/20 hover:border-white/40 px-4 py-2 rounded-md transition-all duration-150"
@@ -182,7 +186,7 @@ function Navbar() {
                 Dashboard
               </Link>
               <button
-                onClick={() => { logout(); setOpen(false); }}
+                onClick={logout}
                 className="mt-3 flex justify-center bg-white/[0.06] text-white/70 hover:text-white text-[13px] font-medium py-2.5 rounded-md w-full"
               >
                 Sign out
@@ -238,8 +242,6 @@ function Hero() {
     { n: "4.9★", l: "Rating" },
     { n: "24/7", l: "Support" },
   ];
-
-
 
   return (
     <section className="relative flex items-center overflow-hidden bg-[#0C0C0E] pt-[60px]">
@@ -348,7 +350,7 @@ function Hero() {
                 <div key={c.name} className="bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] transition-all duration-200 group">
                   <div className="h-[90px] flex items-center justify-center relative"
                     style={{ background: `radial-gradient(ellipse at center, ${c.glow} 0%, #141416 70%)` }}>
-                    <span className="text-[40px] group-hover:scale-105 transition-transform duration-300 select-none">{c.emoji}</span>
+                    <span className="text-[40px] group-hover:scale-105 transition-transform duration-300 select-none">🚗</span>
                     <span className="absolute top-2 right-2 text-[8px] font-semibold text-white/50 bg-white/[0.06] px-1.5 py-0.5 rounded tracking-[0.06em]">{c.tag}</span>
                   </div>
                   <div className="px-3 py-2.5 border-t border-white/[0.06]">
@@ -405,21 +407,41 @@ function Ticker() {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-function mapApiVehicle(v: any): Vehicle {
+interface ApiVehicle {
+  _id?: string;
+  name: string;
+  brand: string;
+  type: string;
+  emoji: string;
+  pricePerDay: number;
+  tag?: string;
+  status?: string;
+  isAvailable?: boolean;
+  fuel?: string;
+  seats?: number;
+  cc?: string;
+  transmission?: string;
+  categories?: Category[];
+  description?: string;
+  images?: string[];
+  specs?: { fuelType?: string; seats?: number; engineCapacity?: string; transmission?: string };
+}
+
+function mapApiVehicle(v: ApiVehicle): Vehicle {
   return {
     id: v._id ? parseInt(v._id.toString().slice(-6), 16) : 0,
     _id: v._id?.toString(),
     name: v.name,
     brand: v.brand,
     type: v.type,
-    emoji: v.emoji,
+    emoji: v.type?.toLowerCase().includes("bike") ? "🏍️" : "🚗",
     price: v.pricePerDay,
-    tag: v.tag,
-    fuel: v.fuel,
-    seats: v.seats,
-    cc: v.cc,
-    transmission: v.transmission,
-    categories: ["All", ...(v.categories || [])] as Category[],
+    tag: v.tag || (v.status === "approved" && v.isAvailable ? "Available" : undefined),
+    fuel: v.specs?.fuelType || "Petrol",
+    seats: v.specs?.seats || 4,
+    cc: v.specs?.engineCapacity,
+    transmission: v.specs?.transmission || "Manual",
+    categories: ["All", ...(v.categories || (v.type ? [v.type.charAt(0).toUpperCase() + v.type.slice(1) + "s"] : []))] as Category[],
     images: v.images,
   };
 }
@@ -435,7 +457,11 @@ function Vehicles() {
       try {
         const res = await fetch("/api/vehicles");
         const json = await res.json();
-        if (json.success && Array.isArray(json.data?.items)) {
+        // Checked against backend API data payloads mapping pattern safely
+        if (json.success && Array.isArray(json.data)) {
+          const api = json.data.map(mapApiVehicle);
+          setVehicles((prev) => [...api, ...prev]);
+        } else if (json.success && Array.isArray(json.data?.items)) {
           const api = json.data.items.map(mapApiVehicle);
           setVehicles((prev) => [...api, ...prev]);
         }
@@ -485,7 +511,7 @@ function Vehicles() {
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filtered.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} />
+            <VehicleCard key={v._id || v.id} vehicle={v} />
           ))}
         </div>
 
@@ -508,6 +534,9 @@ function Vehicles() {
 
 function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
   const category = v.categories.find((c) => c !== "All") || "Cars";
+  
+  // Use MongoDB fallback destination string path if available, else standard fallback id
+  const targetHref = `/vehicles/${v._id || v.id}`;
 
   return (
     <div className="group bg-[#141416] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.14] hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
@@ -515,7 +544,7 @@ function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
         {v.images && v.images.length > 0 ? (
           <>
             <img
-              src={`${API_URL}${v.images[0]}`}
+              src={v.images[0].startsWith('http') ? v.images[0] : `${API_URL}${v.images[0]}`}
               alt={`${v.brand} ${v.name}`}
               className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
             />
@@ -563,11 +592,11 @@ function VehicleCard({ vehicle: v }: { vehicle: Vehicle }) {
         </div>
 
         <div className="flex gap-1.5 mt-auto">
-          <Link href={`/vehicles/${v.id}`}
+          <Link href={targetHref}
             className="flex-1 text-center text-[11px] text-white/35 hover:text-white/65 border border-white/[0.08] hover:border-white/[0.16] py-2.5 rounded-md transition-all duration-150">
             Details
           </Link>
-          <Link href={`/vehicles/${v.id}`}
+          <Link href={targetHref}
             className="flex-1 text-center text-[11px] text-white font-medium bg-[#E11D48] hover:bg-[#F43F5E] py-2.5 rounded-md transition-colors duration-150">
             Book now
           </Link>
