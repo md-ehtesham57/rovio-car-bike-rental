@@ -18,6 +18,7 @@ const app = express();
 // ─── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: config.isProd() ? undefined : false,
 }));
 

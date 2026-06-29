@@ -5,6 +5,7 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile.dev
+      network: host
     container_name: rovio-web-dev
     restart: unless-stopped
     ports:
@@ -28,6 +29,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile.dev
+      network: host
     container_name: rovio-api-dev
     restart: unless-stopped
     ports:
@@ -52,6 +54,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile.dev
+      network: host
     container_name: rovio-worker-dev
     restart: unless-stopped
     command: ["npx", "tsx", "watch", "src/delivery/workers/mail.worker.ts"]
